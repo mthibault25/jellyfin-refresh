@@ -1,0 +1,14 @@
+[Unit]
+Description=Riven Media Web UI
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/docker/webapp
+ExecStart=/usr/bin/gunicorn --bind 0.0.0.0:8095 app:app --workers 2 --threads 2
+Restart=on-failure
+Environment=PATH=/usr/bin:/usr/local/bin
+
+[Install]
+WantedBy=multi-user.target

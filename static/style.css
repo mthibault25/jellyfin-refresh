@@ -1,0 +1,19 @@
+body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial; margin:16px; background:#f7f7f8; color:#111}
+header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+h1{margin:0;font-size:20px}
+nav a{margin-left:8px;color:#0a66c2;text-decoration:none}
+.col{margin-bottom:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.card{background:#fff;padding:12px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.card a{font-weight:600;color:#111;text-decoration:none}
+.actions{margin-top:18px}
+.actions-row button{margin-right:8px}
+.output{background:#000;color:#0f0;padding:10px;height:300px;overflow:auto;border-radius:6px}
+.season{background:#fff;padding:10px;margin-bottom:10px;border-radius:8px}
+.season h3{margin:0 0 8px 0}
+.ep{padding:4px 0}
+.ep-4k{color:green;font-weight:600}
+.ep-1080{color:royalblue}
+.ep-720{color:goldenrod}
+button{background:#0a66c2;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer}
+button:hover{opacity:0.95}

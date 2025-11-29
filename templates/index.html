@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+
+{% block content %}
+  <section class="col">
+    <h2>Shows</h2>
+    <div class="grid">
+      {% for s in shows %}
+        <div class="card">
+          <a href="{{ url_for('show_page', show=s) }}">{{ s }}</a>
+          <form onsubmit="event.preventDefault(); streamToPre('/run/refresh_show', {'show': '{{ s }}'}, 'output')">
+            <button type="submit">Refresh this show</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="col">
+    <h2>Movies</h2>
+    <div class="grid">
+      {% for m in movies %}
+        <div class="card">
+          <span>{{ m }}</span>
+          <form onsubmit="event.preventDefault(); streamToPre('/run/refresh_movie', {'movie': '{{ m }}'}, 'output')">
+            <button type="submit">Refresh this movie</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="actions">
+    <h3>Actions</h3>
+    <div class="actions-row">
+      <button onclick="streamToPre('/run/refresh_shows_inc', null, 'output')">Incremental Shows</button>
+      <button onclick="streamToPre('/run/refresh_movies_inc', null, 'output')">Incremental Movies</button>
+      <button onclick="streamToPre('/run/refresh_all', null, 'output')">Full Refresh ALL</button>
+    </div>
+    <pre id="output" class="output"></pre>
+  </section>
+{% endblock %}

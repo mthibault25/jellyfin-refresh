@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+
+{% block content %}
+  <h2>Show: {{ show }}</h2>
+
+  <div class="show-actions">
+    <form onsubmit="event.preventDefault(); streamToPre('/run/refresh_show', {'show': '{{ show }}'}, 'output')">
+      <button type="submit">Refresh this show</button>
+    </form>
+    <a href="{{ url_for('index') }}">Back</a>
+  </div>
+
+  {% for season in seasons %}
+    <div class="season">
+      <h3>{{ season }}</h3>
+      <ul>
+        {% for ep in list_episodes(show, season) %}
+          {% set lower = ep.lower() %}
+          {% if '2160' in lower or '4k' in lower or 'uhd' in lower %}
+            <li class="ep ep-4k">{{ ep }}</li>
+          {% elif '1080' in lower %}
+            <li class="ep ep-1080">{{ ep }}</li>
+          {% elif '720' in lower %}
+            <li class="ep ep-720">{{ ep }}</li>
+          {% else %}
+            <li class="ep">{{ ep }}</li>
+          {% endif %}
+        {% endfor %}
+      </ul>
+    </div>
+  {% endfor %}
+
+  <pre id="output" class="output"></pre>
+{% endblock %}

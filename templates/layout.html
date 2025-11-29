@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Riven Media UI</title>
+  <link rel="stylesheet" href="{{ url_for('static_files', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <h1>Riven Media — Remote UI</h1>
+    <nav>
+      <a href="{{ url_for('index') }}">Home</a>
+    </nav>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    <small>Runs on {{ request.host }} — uses server scripts in /opt/docker/scripts</small>
+  </footer>
+
+  <script>
+  // helper: stream command output and display inside a <pre> element
+  async function streamToPre(url, form=null, preId='output') {
+    const pre = document.getElementById(preId)
+    pre.textContent = ''
+    const options = { method: 'POST' }
+    if (form) {
+      options.body = new URLSearchParams(form)
+    }
+    const resp = await fetch(url, options)
+    if (!resp.body) {
+      pre.textContent = await resp.text()
+      return
+    }
+    const reader = resp.body.getReader()
+    const decoder = new TextDecoder()
+    while (true) {
+      const {done, value} = await reader.read()
+      if (done) break
+      pre.textContent += decoder.decode(value)
+      pre.scrollTop = pre.scrollHeight
+    }
+  }
+  </script>
+</body>
+</html>
