@@ -58,7 +58,9 @@ jobs:
           IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/jellyfin-refresh:latest
         run: |
           echo "Deploying to ${REMOTE_USER}@${REMOTE_HOST} via Tailscale SSH"
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "bash -lc 'docker pull ${IMAGE}; if [ \"\$(docker ps -a -q -f name=^/jellyfin-refresh$)\" != \"\" ]; then echo "Existing container found: stopping and removing"; docker stop jellyfin-refresh || true; docker rm jellyfin-refresh || true; else echo "No existing container found; continuing"; fi; docker run -d --name jellyfin-refresh -p 5000:5000 --restart unless-stopped ${IMAGE}'"
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} 'docker pull '
+            "${IMAGE}"'; if [ "$(docker ps -a -q -f name=^/jellyfin-refresh$)" != "" ]; then echo "Existing container found: stopping and removing"; docker stop jellyfin-refresh || true; docker rm jellyfin-refresh || true; else echo "No existing container found; continuing"; fi; docker run -d --name jellyfin-refresh -p 5000:5000 --restart unless-stopped '
+            "${IMAGE}"
 
       - name: Bring down Tailscale
         if: always()
