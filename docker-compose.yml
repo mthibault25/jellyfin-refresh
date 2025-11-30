@@ -1,0 +1,10 @@
+﻿version: '3.8'
+
+services:
+  app:
+    image: ${IMAGE:-jellyfin-refresh:latest}
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
