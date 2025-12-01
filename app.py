@@ -11,7 +11,7 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 # CONFIG - edit if your paths differ
 BASENAME_4K = "/mnt/debrid/riven_symlinks"
 BASENAME_1080 = "/mnt/debrid_1080/riven_symlinks"
-MEDIA_SHows = "/media/shows"
+MEDIA_SHOWS = "/media/shows"
 MEDIA_MOVIES = "/media/movies"
 
 SHOWS_SCRIPT = "/opt/docker/scripts/sync_tv_folders.sh"
@@ -25,20 +25,20 @@ def safe_listdir(path):
         return []
 
 def list_shows():
-    return safe_listdir(MEDIA_SHows)
+    return safe_listdir(MEDIA_SHOWS)
 
 def list_movies():
     return safe_listdir(MEDIA_MOVIES)
 
 def list_seasons(show):
-    base = os.path.join(MEDIA_SHows, show)
+    base = os.path.join(MEDIA_SHOWS, show)
     try:
         return sorted([d for d in os.listdir(base) if os.path.isdir(os.path.join(base, d))], key=lambda s: s)
     except FileNotFoundError:
         return []
 
 def list_episodes(show, season):
-    base = os.path.join(MEDIA_SHows, show, season)
+    base = os.path.join(MEDIA_SHOWS, show, season)
     eps = []
     try:
         for f in sorted(os.listdir(base)):
