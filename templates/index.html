@@ -17,14 +17,14 @@
   <section class="col">
     <h2>Movies</h2>
     <div class="grid">
-      {% for m in movies %}
-        <div class="card">
-          <span>{{ m }}</span>
-          <form onsubmit="event.preventDefault(); streamToPre('/run/refresh_movie', {'movie': '{{ m }}'}, 'output')">
-            <button type="submit">Refresh this movie</button>
-          </form>
+      <div class="autocomplete">
+        <label for="movie-search">Search movies</label>
+        <input id="movie-search" type="text" placeholder="Start typing a movie name..." autocomplete="off" />
+        <div id="movie-suggestions" class="suggestions" role="listbox" aria-label="Movie suggestions"></div>
+        <div id="movie-actions" class="suggestion-actions" style="display:none">
+          <button id="movie-refresh">Refresh this movie</button>
         </div>
-      {% endfor %}
+      </div>
     </div>
   </section>
 
@@ -38,9 +38,12 @@
     <pre id="output" class="output"></pre>
   </section>
   <script id="shows-data" type="application/json">{{ shows | tojson | safe }}</script>
+  <script id="movies-data" type="application/json">{{ movies | tojson | safe }}</script>
   <script>
   // Shows data from server (embedded as JSON to avoid template/js parsing issues)
   const SHOWS_DATA = JSON.parse(document.getElementById('shows-data').textContent);
+  // Movies data from server
+  const MOVIES_DATA = JSON.parse(document.getElementById('movies-data').textContent);
 
   const input = document.getElementById('show-search');
   const suggBox = document.getElementById('show-suggestions');
@@ -48,6 +51,13 @@
   const link = document.getElementById('show-link');
   const refreshBtn = document.getElementById('show-refresh');
   let selectedShow = null;
+
+  // Movie elements
+  const minput = document.getElementById('movie-search');
+  const msuggBox = document.getElementById('movie-suggestions');
+  const mautctions = document.getElementById('movie-actions');
+  const mrefreshBtn = document.getElementById('movie-refresh');
+  let selectedMovie = null;
 
   function clearSuggestions() {
     suggBox.innerHTML = '';
@@ -60,6 +70,15 @@
     div.setAttribute('role','option');
     div.textContent = name;
     div.addEventListener('click', () => selectShow(name));
+    return div;
+  }
+
+  function makeMovieSuggestion(name) {
+    const div = document.createElement('div');
+    div.className = 'suggestion-item';
+    div.setAttribute('role','option');
+    div.textContent = name;
+    div.addEventListener('click', () => selectMovie(name));
     return div;
   }
 
@@ -82,6 +101,17 @@
     suggBox.style.display = 'block';
   });
 
+  // movie input logic
+  minput.addEventListener('input', () => {
+    const q = minput.value.trim().toLowerCase();
+    msuggBox.innerHTML = '';
+    if (!q) { msuggBox.style.display='none'; mautctions.style.display='none'; selectedMovie=null; return }
+    const matches = MOVIES_DATA.filter(m => m.toLowerCase().includes(q)).slice(0,20);
+    if (matches.length === 0) { msuggBox.style.display='none'; return }
+    matches.forEach(m => msuggBox.appendChild(makeMovieSuggestion(m)));
+    msuggBox.style.display = 'block';
+  });
+
   // click outside to close
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.autocomplete')) {
@@ -93,6 +123,21 @@
     e.preventDefault();
     if (!selectedShow) return;
     streamToPre('/run/refresh_show', {'show': selectedShow}, 'output');
+  });
+
+  // movie selection and refresh
+  function selectMovie(name) {
+    selectedMovie = name;
+    minput.value = name;
+    msuggBox.innerHTML = '';
+    msuggBox.style.display = 'none';
+    mautctions.style.display = 'block';
+  }
+
+  mrefreshBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!selectedMovie) return;
+    streamToPre('/run/refresh_movie', {'movie': selectedMovie}, 'output');
   });
   </script>
 
