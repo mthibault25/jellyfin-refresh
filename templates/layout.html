@@ -29,19 +29,37 @@
     const options = { method: 'POST' }
     if (form) {
       options.body = new URLSearchParams(form)
+      options.headers = { 'Content-Type': 'application/x-www-form-urlencoded' }
     }
+
     const resp = await fetch(url, options)
+    if (!resp.ok) {
+      pre.textContent = `Error: ${resp.status} ${resp.statusText}`
+      return
+    }
+
     if (!resp.body) {
       pre.textContent = await resp.text()
       return
     }
+
     const reader = resp.body.getReader()
     const decoder = new TextDecoder()
-    while (true) {
-      const {done, value} = await reader.read()
-      if (done) break
-      pre.textContent += decoder.decode(value)
+    try {
+      while (true) {
+        const {done, value} = await reader.read()
+        if (done) break
+        // decode streamed chunk and append
+        pre.textContent += decoder.decode(value, { stream: true })
+        pre.scrollTop = pre.scrollHeight
+      }
+      // flush any remaining partial characters
+      pre.textContent += decoder.decode()
       pre.scrollTop = pre.scrollHeight
+    } catch (err) {
+      pre.textContent += `\n\n[stream error] ${err}`
+    } finally {
+      if (reader.releaseLock) try { reader.releaseLock() } catch(e) {}
     }
   }
   </script>

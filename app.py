@@ -6,16 +6,32 @@ from flask import Flask, render_template, request, Response, stream_with_context
 
 import subprocess
 
+# Load environment variables from .env.local if it exists (for local development)
+from dotenv import load_dotenv
+load_dotenv('.env.local', override=True)
+
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
 # CONFIG - edit if your paths differ
-BASENAME_4K = "/mnt/debrid/riven_symlinks"
-BASENAME_1080 = "/mnt/debrid_1080/riven_symlinks"
-MEDIA_SHOWS = "/media/shows"
-MEDIA_MOVIES = "/media/movies"
+# Use DEV_MODE environment variable to switch between local testing and remote production
+DEV_MODE = os.getenv('DEV_MODE', '').lower() in ('true', '1', 'yes')
 
-SHOWS_SCRIPT = "/opt/docker/scripts/sync_tv_folders.sh"
-MOVIES_SCRIPT = "/opt/docker/scripts/sync_movies_folders.sh"
+if DEV_MODE:
+    # Local development paths (Windows-friendly)
+    BASENAME_4K = os.path.expandvars(os.getenv('DEV_BASENAME_4K', '%LOCALAPPDATA%\\jellyfin-refresh-test\\debrid_4k'))
+    BASENAME_1080 = os.path.expandvars(os.getenv('DEV_BASENAME_1080', '%LOCALAPPDATA%\\jellyfin-refresh-test\\debrid_1080'))
+    MEDIA_SHOWS = os.path.expandvars(os.getenv('DEV_MEDIA_SHOWS', '%LOCALAPPDATA%\\jellyfin-refresh-test\\media\\shows'))
+    MEDIA_MOVIES = os.path.expandvars(os.getenv('DEV_MEDIA_MOVIES', '%LOCALAPPDATA%\\jellyfin-refresh-test\\media\\movies'))
+    SHOWS_SCRIPT = os.path.expandvars(os.getenv('DEV_SHOWS_SCRIPT', '%LOCALAPPDATA%\\jellyfin-refresh-test\\scripts\\mock_sync.sh'))
+    MOVIES_SCRIPT = os.path.expandvars(os.getenv('DEV_MOVIES_SCRIPT', '%LOCALAPPDATA%\\jellyfin-refresh-test\\scripts\\mock_sync.sh'))
+else:
+    # Remote production paths
+    BASENAME_4K = "/mnt/debrid/riven_symlinks"
+    BASENAME_1080 = "/mnt/debrid_1080/riven_symlinks"
+    MEDIA_SHOWS = "/media/shows"
+    MEDIA_MOVIES = "/media/movies"
+    SHOWS_SCRIPT = "/opt/docker/scripts/sync_tv_folders.sh"
+    MOVIES_SCRIPT = "/opt/docker/scripts/sync_movies_folders.sh"
 
 # Utility helpers
 def safe_listdir(path):
