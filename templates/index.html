@@ -55,7 +55,7 @@
   // Movie elements
   const minput = document.getElementById('movie-search');
   const msuggBox = document.getElementById('movie-suggestions');
-  const mautctions = document.getElementById('movie-actions');
+  const mactions = document.getElementById('movie-actions');
   const mrefreshBtn = document.getElementById('movie-refresh');
   let selectedMovie = null;
 
@@ -105,7 +105,7 @@
   minput.addEventListener('input', () => {
     const q = minput.value.trim().toLowerCase();
     msuggBox.innerHTML = '';
-    if (!q) { msuggBox.style.display='none'; mautctions.style.display='none'; selectedMovie=null; return }
+    if (!q) { msuggBox.style.display='none'; mactions.style.display='none'; selectedMovie=null; return }
     const matches = MOVIES_DATA.filter(m => m.toLowerCase().includes(q)).slice(0,20);
     if (matches.length === 0) { msuggBox.style.display='none'; return }
     matches.forEach(m => msuggBox.appendChild(makeMovieSuggestion(m)));
@@ -131,7 +131,7 @@
     minput.value = name;
     msuggBox.innerHTML = '';
     msuggBox.style.display = 'none';
-    mautctions.style.display = 'block';
+    mactions.style.display = 'block';
   }
 
   mrefreshBtn.addEventListener('click', (e) => {

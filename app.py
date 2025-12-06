@@ -22,8 +22,8 @@ if DEV_MODE:
     BASENAME_1080 = os.path.expandvars(os.getenv('DEV_BASENAME_1080', '%LOCALAPPDATA%\\jellyfin-refresh-test\\debrid_1080'))
     MEDIA_SHOWS = os.path.expandvars(os.getenv('DEV_MEDIA_SHOWS', '%LOCALAPPDATA%\\jellyfin-refresh-test\\media\\shows'))
     MEDIA_MOVIES = os.path.expandvars(os.getenv('DEV_MEDIA_MOVIES', '%LOCALAPPDATA%\\jellyfin-refresh-test\\media\\movies'))
-    SHOWS_SCRIPT = os.path.expandvars(os.getenv('DEV_SHOWS_SCRIPT', '%LOCALAPPDATA%\\jellyfin-refresh-test\\scripts\\mock_sync.sh'))
-    MOVIES_SCRIPT = os.path.expandvars(os.getenv('DEV_MOVIES_SCRIPT', '%LOCALAPPDATA%\\jellyfin-refresh-test\\scripts\\mock_sync.sh'))
+    SHOWS_SCRIPT = os.path.expandvars(os.getenv('DEV_SHOWS_SCRIPT', '%LOCALAPPDATA%\\jellyfin-refresh-test\\scripts\\mock_sync.bat'))
+    MOVIES_SCRIPT = os.path.expandvars(os.getenv('DEV_MOVIES_SCRIPT', '%LOCALAPPDATA%\\jellyfin-refresh-test\\scripts\\mock_sync.bat'))
 else:
     # Remote production paths
     BASENAME_4K = "/mnt/debrid/riven_symlinks"

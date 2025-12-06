@@ -46,7 +46,7 @@ foreach ($movie in $movies) {
 }
 
 # Create a mock sync script (batch file that echoes output)
-$mockScript = @"
+$mockScriptBat = @"
 @echo off
 REM Mock sync script for local testing
 echo Mock sync started for: %*
@@ -55,8 +55,8 @@ echo Mock sync complete!
 exit /b 0
 "@
 
-$scriptPath = "$BaseDir\scripts\mock_sync.sh"
-Set-Content -Path $scriptPath -Value $mockScript -Force
+$scriptPath = "$BaseDir\scripts\mock_sync.bat"
+Set-Content -Path $scriptPath -Value $mockScriptBat -Force
 Write-Host "Created mock script: $scriptPath"
 
 Write-Host "`nSetup complete! Test data ready in: $BaseDir"
