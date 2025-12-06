@@ -36,8 +36,17 @@ else:
 # Utility helpers
 def safe_listdir(path):
     try:
-        return sorted([d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))])
+        items = sorted([d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))])
+        print(f"[DEBUG] safe_listdir({path}): found {len(items)} items", flush=True)
+        return items
     except FileNotFoundError:
+        print(f"[DEBUG] safe_listdir({path}): path not found", flush=True)
+        return []
+    except PermissionError:
+        print(f"[DEBUG] safe_listdir({path}): permission denied", flush=True)
+        return []
+    except Exception as e:
+        print(f"[DEBUG] safe_listdir({path}): error {e}", flush=True)
         return []
 
 def list_shows():
@@ -82,6 +91,7 @@ def stream_cmd(cmd):
 def index():
     shows = list_shows()
     movies = list_movies()
+    print(f"[DEBUG] index(): shows={len(shows)}, movies={len(movies)}", flush=True)
     return render_template('index.html', shows=shows, movies=movies)
 
 @app.route('/show/<path:show>')
