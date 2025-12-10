@@ -3,6 +3,25 @@ export TZ="America/Toronto"
 set -euo pipefail
 
 # ---------------------------------------------------------
+# CACHE AND LOG SETUP
+# ---------------------------------------------------------
+
+CACHE_DIR="/opt/riven-cache"
+mkdir -p "$CACHE_DIR"
+
+if [[ "$SRC" == *"/mnt/debrid_1080/"* ]]; then
+    LAST_FILE="$CACHE_DIR/tv-1080.last"
+    DEFAULT_RES="1080p"
+    LOG_FILE="/var/log/tv-1080.log"
+else
+    LAST_FILE="$CACHE_DIR/tv-4k.last"
+    DEFAULT_RES="2160p"
+    LOG_FILE="/var/log/tv-4k.log"
+fi
+
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+# ---------------------------------------------------------
 # LOGGING
 # ---------------------------------------------------------
 echo ""
@@ -39,16 +58,7 @@ done
 # ---------------------------------------------------------
 # TIMESTAMP CACHE
 # ---------------------------------------------------------
-CACHE_DIR="/opt/riven-cache"
-mkdir -p "$CACHE_DIR"
 
-if [[ "$SRC" == *"/mnt/debrid_1080/"* ]]; then
-    LAST_FILE="$CACHE_DIR/tv-1080.last"
-    DEFAULT_RES="1080p"
-else
-    LAST_FILE="$CACHE_DIR/tv-4k.last"
-    DEFAULT_RES="2160p"
-fi
 
 touch "$LAST_FILE"
 
