@@ -15,4 +15,4 @@ services:
       - /media/shows:/media/shows
       - /media/movies:/media/movies
       # Mount scripts
-      - ./scripts:./scripts:ro
+      - ./scripts:/opt/docker/jellyfin-refresh/scripts:ro
