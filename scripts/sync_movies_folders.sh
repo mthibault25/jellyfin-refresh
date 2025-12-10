@@ -2,6 +2,9 @@
 export TZ="America/Toronto"
 set -euo pipefail
 
+SRC="${1:-/mnt/debrid/riven_symlinks/movies}"
+DEST="/media/movies"
+
 # ---------------------------------------------------------
 # CACHE AND LOG SETUP
 # ---------------------------------------------------------
@@ -31,9 +34,6 @@ echo ""
 # ---------------------------------------------------------
 # INPUT / PATHS
 # ---------------------------------------------------------
-SRC="${1:-/mnt/debrid/riven_symlinks/movies}"
-DEST="/media/movies"
-
 UPDATE_LAST_FILE=true
 FULL=false
 FILTER_MOVIE=""
