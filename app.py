@@ -30,8 +30,8 @@ else:
     BASENAME_1080 = "/mnt/debrid_1080/riven_symlinks"
     MEDIA_SHOWS = "/media/shows"
     MEDIA_MOVIES = "/media/movies"
-    SHOWS_SCRIPT = "/opt/docker/scripts/sync_tv_folders.sh"
-    MOVIES_SCRIPT = "/opt/docker/scripts/sync_movies_folders.sh"
+    SHOWS_SCRIPT = "./scripts/sync_tv_folders.sh"
+    MOVIES_SCRIPT = "./scripts/sync_movies_folders.sh"
 
 # Utility helpers
 def safe_listdir(path):
