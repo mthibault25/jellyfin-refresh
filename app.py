@@ -115,6 +115,7 @@ def refresh_show():
     # Call both 4k and 1080 variants sequentially
     def gen():
         yield f"=== Refreshing show: {show} (4K source) ===\n"
+        yield f"Running command: {shlex.join([SHOWS_SCRIPT, os.path.join(BASENAME_4K, 'shows'), '--show', show])}\n"
         cmd = [SHOWS_SCRIPT, os.path.join(BASENAME_4K, "shows"), "--show", show]
         for out in stream_cmd(cmd):
             yield out
