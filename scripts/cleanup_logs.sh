@@ -33,11 +33,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Log files to clean
+BASE="/opt/docker/logs"
 LOG_FILES=(
-    "/var/log/tv_1080.log"
-    "/var/log/tv_4k.log"
-    "/var/log/movie_1080.log"
-    "/var/log/movie_4k.log"
+    "$BASE/tv_1080.log"
+    "$BASE/tv_4k.log"
+    "$BASE/movie_1080.log"
+    "$BASE/movie_4k.log"
 )
 
 echo "Log Cleanup Script"
