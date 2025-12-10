@@ -15,11 +15,11 @@ mkdir -p "$CACHE_DIR"
 if [[ "$SRC" == *"/mnt/debrid_1080/"* ]]; then
     LAST_FILE="$CACHE_DIR/movies-1080.last"
     DEFAULT_RES="1080p"
-    LOG_FILE="/opt/docker/jellyfin-refresh/logs/movie-1080.log"
+    LOG_FILE="/opt/docker/logs/movie-1080.log"
 else
     LAST_FILE="$CACHE_DIR/movies-4k.last"
     DEFAULT_RES="2160p"
-    LOG_FILE="/opt/docker/jellyfin-refresh/logs/movie-4k.log"
+    LOG_FILE="/opt/docker/logs/movie-4k.log"
 fi
 
 exec > >(tee -a "$LOG_FILE") 2>&1
