@@ -69,7 +69,7 @@ jobs:
           REMOTE_USER: ${{ secrets.REMOTE_USER }}
         run: |
           echo "Making scripts executable on remote server"
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "chmod +x ~/jellyfin-refresh/scripts/*.sh"
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "chmod +x /opt/docker/jellyfin-refresh/scripts/*.sh"
 
 
       - name: Bring down Tailscale
