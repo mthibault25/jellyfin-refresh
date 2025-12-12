@@ -1,0 +1,565 @@
+#!/usr/bin/env python3
+"""
+media_sync.py
+
+Unified TV + Movies symlink-to-jellyfin sync module.
+
+Public functions you can import & call:
+  - sync_movies_4k(full=False, movie_filter=None)
+  - sync_movies_1080(full=False, movie_filter=None)
+  - sync_tv_4k(full=False, show_filter=None, episode_filter=None)
+  - sync_tv_1080(full=False, show_filter=None, episode_filter=None)
+  - sync_movie(movie_name)            # convenience: picks best resolution by checking paths
+  - sync_show(show_name)              # convenience
+  - sync_episode(show_name, ep_code)  # convenience (e.g. "S01E03")
+  - sync_all()                        # runs 4K then 1080 for movies and tv
+
+Also supports CLI usage when run directly:
+  ./media_sync.py --mode movies --res 4k --full
+  ./media_sync.py --mode tv --res 1080 --show "My Show" --episode S01E01
+
+Logging:
+  /opt/docker/logs/sync_tv_4k.log
+  /opt/docker/logs/sync_tv_1080.log
+  /opt/docker/logs/sync_movie_4k.log
+  /opt/docker/logs/sync_movie_1080.log
+"""
+from __future__ import annotations
+import os
+import sys
+import time
+import subprocess
+import logging
+from pathlib import Path
+import stat
+import re
+import argparse
+from typing import List, Tuple, Optional, Callable
+
+# -----------------------------------------------------------
+# ENV / DEFAULT PATHS (confirmed)
+# -----------------------------------------------------------
+os.environ.setdefault("TZ", "America/Toronto")
+try:
+    time.tzset()
+except Exception:
+    # windows may not support tzset; that's fine
+    pass
+
+CACHE_DIR = Path("/opt/riven-cache")
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+LOG_DIR = Path("/opt/docker/logs")
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+# Source paths (per your confirmation)
+SRC_MOVIES_4K = Path("/mnt/debrid/riven_symlinks/movies")
+SRC_MOVIES_1080 = Path("/mnt/debrid_1080/riven_symlinks/movies")
+DEST_MOVIES = Path("/media/movies")
+
+SRC_TV_4K = Path("/mnt/debrid/riven_symlinks/shows")
+SRC_TV_1080 = Path("/mnt/debrid_1080/riven_symlinks/shows")
+DEST_TV = Path("/media/shows")
+
+
+# -----------------------------------------------------------
+# Logging helpers
+# -----------------------------------------------------------
+def _make_logger(name: str, log_path: Path) -> logging.Logger:
+    """
+    Create (or return) a logger that writes to log_path and stdout.
+    The format is kept minimal to match your existing scripts.
+    """
+    logger = logging.getLogger(name)
+    if logger.handlers:
+        return logger  # already configured
+
+    logger.setLevel(logging.INFO)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    formatter = logging.Formatter("%(message)s")
+
+    fh = logging.FileHandler(log_path, mode="a")
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
+
+    sh = logging.StreamHandler(sys.stdout)
+    sh.setFormatter(formatter)
+    logger.addHandler(sh)
+
+    # don't propagate to root
+    logger.propagate = False
+    return logger
+
+
+# -----------------------------------------------------------
+# Resolution detection helpers (shared)
+# -----------------------------------------------------------
+def _detect_filename_res(name: str) -> Optional[str]:
+    n = name.lower()
+    if "2160" in n or "4k" in n or "uhd" in n:
+        return "2160p"
+    if "1080" in n:
+        return "1080p"
+    return None
+
+
+def _detect_keyword_res(name: str) -> Optional[str]:
+    n = name.lower()
+    # dv vs dovi matching; hdr; avc
+    if "dv" in n or "dovi" in n or "hdr" in n:
+        return "2160p"
+    if "avc" in n:
+        return "1080p"
+    return None
+
+
+def _detect_folder_res(name: str) -> Optional[str]:
+    n = name.lower()
+    if "2160" in n or "4k" in n:
+        return "2160p"
+    if "1080" in n:
+        return "1080p"
+    return None
+
+
+def _probe_resolution(path: str) -> Optional[str]:
+    """
+    Uses ffprobe to determine video width, maps to 2160p/1080p/720p.
+    Non-fatal: returns None on failure.
+    """
+    try:
+        out = subprocess.check_output(
+            ["ffprobe", "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=width", "-of", "csv=p=0", path],
+            stderr=subprocess.DEVNULL,
+            timeout=5
+        ).decode().strip()
+        if not out:
+            return None
+        w = int(out)
+        if w >= 3800:
+            return "2160p"
+        if w >= 1900:
+            return "1080p"
+        return "720p"
+    except Exception:
+        return None
+
+
+def detect_resolution(target_path: str, default_res: str) -> str:
+    """
+    Try filename -> keywords -> parent folder -> ffprobe -> default.
+    """
+    base = os.path.basename(target_path)
+    r = _detect_filename_res(base)
+    if r:
+        return r
+    r = _detect_keyword_res(base)
+    if r:
+        return r
+    parent = os.path.basename(os.path.dirname(target_path))
+    r = _detect_folder_res(parent)
+    if r:
+        return r
+    r = _probe_resolution(target_path)
+    if r:
+        return r
+    return default_res
+
+
+# -----------------------------------------------------------
+# Generic filesystem helpers
+# -----------------------------------------------------------
+def find_symlinks_sorted(src: Path) -> List[Tuple[float, str]]:
+    """
+    Walk src and return list of tuples (mtime, path) for symlink files,
+    sorted newest -> oldest.
+    """
+    records: List[Tuple[float, str]] = []
+    if not src.exists():
+        return records
+
+    for root, _, files in os.walk(src):
+        for f in files:
+            p = os.path.join(root, f)
+            try:
+                st = os.lstat(p)
+                if stat.S_ISLNK(st.st_mode):
+                    records.append((st.st_mtime, p))
+            except Exception:
+                continue
+    records.sort(key=lambda x: x[0], reverse=True)
+    return records
+
+
+def atomic_symlink(target: Path, dest: Path) -> None:
+    """
+    Create symlink dest -> target atomically using a tmp file.
+    """
+    tmp = dest.with_suffix(dest.suffix + ".tmp")
+    try:
+        if tmp.exists():
+            tmp.unlink()
+        os.symlink(str(target), str(tmp))
+        os.replace(str(tmp), str(dest))
+    finally:
+        if tmp.exists():
+            try:
+                tmp.unlink()
+            except Exception:
+                pass
+
+
+# -----------------------------------------------------------
+# Generic sync engine (parameterized)
+# -----------------------------------------------------------
+def _sync_engine(
+    *,
+    src: Path,
+    dest_root: Path,
+    cache_last_file: Path,
+    default_res: str,
+    log_path: Path,
+    is_tv: bool,
+    full: bool = False,
+    filter_show: Optional[str] = None,
+    filter_episode: Optional[str] = None,
+    filter_movie: Optional[str] = None,
+) -> bool:
+    """
+    Core sync routine. Returns True if any processing happened (for timestamp update decision).
+    This function is shared by TV and Movies flows.
+    """
+    logger = _make_logger(log_path.stem, log_path)
+
+    # header
+    now_human = time.strftime("%Y-%m-%d %H:%M:%S")
+    kind = "TV" if is_tv else "MOVIE"
+    logger.info("")
+    logger.info(f"================ {kind} SYNC: {now_human} ================")
+    logger.info("")
+
+    # ensure last file exists
+    cache_last_file.parent.mkdir(parents=True, exist_ok=True)
+    cache_last_file.touch(exist_ok=True)
+
+    # determine prev_ts and whether to update last file
+    update_last_file = True
+    if full or filter_show or filter_episode or filter_movie:
+        prev_ts = 0
+        update_last_file = False
+    else:
+        try:
+            prev_ts = int(cache_last_file.read_text().strip() or "0")
+        except Exception:
+            prev_ts = 0
+
+    now_ts = int(time.time())
+
+    logger.info(f"{kind} SYNC:")
+    logger.info(f" SRC          = {src}")
+    logger.info(f" PREV_TS      = {prev_ts}")
+    logger.info(f" FULL MODE    = {full}")
+    if is_tv:
+        logger.info(f" FILTER_SHOW  = '{filter_show}'")
+        logger.info(f" FILTER_EP    = '{filter_episode}'")
+    else:
+        logger.info(f" FILTER_MOVIE = '{filter_movie}'")
+    logger.info("")
+
+    processed_any = False
+
+    symlinks = find_symlinks_sorted(src)
+
+    # iterate
+    for ts, link in symlinks:
+        # early filter checks
+        if filter_movie and not is_tv:
+            movie_name = Path(link).parent.name
+            if movie_name != filter_movie:
+                continue
+
+        if filter_show and is_tv:
+            # show is parent of parent
+            try:
+                show_name = Path(link).parent.parent.name
+            except Exception:
+                show_name = ""
+            if show_name != filter_show:
+                continue
+
+        # early stop logic (fast mode)
+        if update_last_file and ts <= prev_ts:
+            logger.info("Stopping early: symlink <= last-run")
+            break
+
+        logger.info(f"NEW: {link}")
+
+        # process link
+        try:
+            link_path = Path(link)
+            basename = link_path.name
+
+            # resolve real file
+            try:
+                target = link_path.resolve(strict=True)
+            except FileNotFoundError:
+                logger.info(f"Broken symlink: {link}")
+                continue
+
+            # tv: derive show & season
+            if is_tv:
+                show_dir = link_path.parent.parent.name
+                season_dir = link_path.parent.name
+            else:
+                movie_name = link_path.parent.name
+
+            # episode filter if tv
+            if is_tv and filter_episode:
+                m = re.search(r"([Ss]\d{2}[Ee]\d{2})", basename)
+                ep = m.group(1) if m else ""
+                if ep != filter_episode:
+                    continue
+
+            # detect resolution
+            res = detect_resolution(str(target), default_res)
+
+            # rename if missing resolution in symlink name
+            if res not in basename:
+                name, ext = os.path.splitext(basename)
+                new_name = f"{name} - {res}{ext}"
+                new_link = link_path.parent / new_name
+                try:
+                    link_path.rename(new_link)
+                    logger.info(f" RENAMED: {new_name}")
+                    link_path = new_link
+                    basename = new_name
+                    processed_any = True
+                except Exception as e:
+                    logger.info(f" Rename failed {link} -> {new_name}: {e}")
+                    # continue processing with original link_path if rename failed
+
+            # create destination path
+            if is_tv:
+                dest_path = dest_root / show_dir / season_dir / basename
+            else:
+                dest_path = dest_root / movie_name / basename
+
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+
+            if dest_path.exists() or dest_path.is_symlink():
+                logger.info(f" Already linked: {dest_path}")
+                continue
+
+            # atomic symlink creation
+            try:
+                atomic_symlink(target, dest_path)
+                logger.info(f" Linked: {dest_path}")
+                processed_any = True
+            except Exception as e:
+                logger.info(f" Link failed: {dest_path}: {e}")
+                continue
+
+        except Exception as exc:
+            logger.info(f"Error processing {link}: {exc}")
+            continue
+
+    # timestamp update decisions
+    if update_last_file and processed_any:
+        try:
+            cache_last_file.write_text(str(now_ts))
+            human = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now_ts))
+            logger.info(f"Updated timestamp: {human} ({now_ts})")
+        except Exception as e:
+            logger.info(f"Failed to update timestamp file {cache_last_file}: {e}")
+    elif update_last_file and not processed_any:
+        logger.info("No changes detected; timestamp not updated.")
+    else:
+        logger.info("Skipped timestamp update (targeted or full refresh).")
+
+    logger.info(f"{kind} SYNC COMPLETE")
+    return processed_any
+
+
+# -----------------------------------------------------------
+# Public convenience wrappers
+# -----------------------------------------------------------
+def sync_movies_4k(full: bool = False, movie_filter: Optional[str] = None) -> bool:
+    return _sync_engine(
+        src=SRC_MOVIES_4K,
+        dest_root=DEST_MOVIES,
+        cache_last_file=CACHE_DIR / "movies-4k.last",
+        default_res="2160p",
+        log_path=LOG_DIR / "sync_movie_4k.log",
+        is_tv=False,
+        full=full,
+        filter_movie=movie_filter,
+    )
+
+
+def sync_movies_1080(full: bool = False, movie_filter: Optional[str] = None) -> bool:
+    return _sync_engine(
+        src=SRC_MOVIES_1080,
+        dest_root=DEST_MOVIES,
+        cache_last_file=CACHE_DIR / "movies-1080.last",
+        default_res="1080p",
+        log_path=LOG_DIR / "sync_movie_1080.log",
+        is_tv=False,
+        full=full,
+        filter_movie=movie_filter,
+    )
+
+
+def sync_tv_4k(full: bool = False, show_filter: Optional[str] = None, episode_filter: Optional[str] = None) -> bool:
+    return _sync_engine(
+        src=SRC_TV_4K,
+        dest_root=DEST_TV,
+        cache_last_file=CACHE_DIR / "tv-4k.last",
+        default_res="2160p",
+        log_path=LOG_DIR / "sync_tv_4k.log",
+        is_tv=True,
+        full=full,
+        filter_show=show_filter,
+        filter_episode=episode_filter,
+    )
+
+
+def sync_tv_1080(full: bool = False, show_filter: Optional[str] = None, episode_filter: Optional[str] = None) -> bool:
+    return _sync_engine(
+        src=SRC_TV_1080,
+        dest_root=DEST_TV,
+        cache_last_file=CACHE_DIR / "tv-1080.last",
+        default_res="1080p",
+        log_path=LOG_DIR / "sync_tv_1080.log",
+        is_tv=True,
+        full=full,
+        filter_show=show_filter,
+        filter_episode=episode_filter,
+    )
+
+
+def sync_movie(movie_name: str) -> None:
+    """
+    Convenience: attempt 4k then 1080 for the named movie.
+    """
+    # try 4k first
+    if SRC_MOVIES_4K.exists():
+        sync_movies_4k(full=False, movie_filter=movie_name)
+    if SRC_MOVIES_1080.exists():
+        sync_movies_1080(full=False, movie_filter=movie_name)
+
+
+def sync_show(show_name: str) -> None:
+    """
+    Convenience: attempt 4k then 1080 for the named show.
+    """
+    if SRC_TV_4K.exists():
+        sync_tv_4k(full=False, show_filter=show_name)
+    if SRC_TV_1080.exists():
+        sync_tv_1080(full=False, show_filter=show_name)
+
+
+def sync_episode(show_name: str, episode_code: str) -> None:
+    """
+    Convenience: sync a specific episode for a show (tries 4k then 1080).
+    episode_code should look like 'S01E03'.
+    """
+    if SRC_TV_4K.exists():
+        sync_tv_4k(full=False, show_filter=show_name, episode_filter=episode_code)
+    if SRC_TV_1080.exists():
+        sync_tv_1080(full=False, show_filter=show_name, episode_filter=episode_code)
+
+
+def sync_all() -> None:
+    """
+    Run all four syncs in this order: movies 4k, movies 1080, tv 4k, tv 1080.
+    """
+    sync_movies_4k()
+    sync_movies_1080()
+    sync_tv_4k()
+    sync_tv_1080()
+
+
+# -----------------------------------------------------------
+# CLI support for ad-hoc running
+# -----------------------------------------------------------
+def _cli():
+    p = argparse.ArgumentParser(description="media_sync - unified tv & movies sync")
+    p.add_argument("--mode", choices=["movies", "tv", "all"], default="all", help="Which content to sync")
+    p.add_argument("--res", choices=["4k", "1080", "both"], default="both", help="Resolution to target")
+    p.add_argument("--full", action="store_true", help="Full run (do not update timestamp file)")
+    p.add_argument("--movie", help="Filter a specific movie name (movies mode)")
+    p.add_argument("--show", help="Filter a specific show name (tv mode)")
+    p.add_argument("--episode", help="Filter a specific episode code, e.g. S01E03 (tv mode)")
+    p.add_argument("--src", help="Optional custom src path (overrides built-ins)")
+
+    args = p.parse_args()
+
+    # small helper to override src if provided
+    if args.mode in ("movies", "all"):
+        if args.res in ("4k", "both"):
+            if args.src:
+                # call engine directly with custom src
+                _sync_engine(
+                    src=Path(args.src),
+                    dest_root=DEST_MOVIES,
+                    cache_last_file=CACHE_DIR / "movies-4k.last",
+                    default_res="2160p",
+                    log_path=LOG_DIR / "sync_movie_4k.log",
+                    is_tv=False,
+                    full=args.full,
+                    filter_movie=args.movie,
+                )
+            else:
+                sync_movies_4k(full=args.full, movie_filter=args.movie)
+        if args.res in ("1080", "both"):
+            if args.src:
+                _sync_engine(
+                    src=Path(args.src),
+                    dest_root=DEST_MOVIES,
+                    cache_last_file=CACHE_DIR / "movies-1080.last",
+                    default_res="1080p",
+                    log_path=LOG_DIR / "sync_movie_1080.log",
+                    is_tv=False,
+                    full=args.full,
+                    filter_movie=args.movie,
+                )
+            else:
+                sync_movies_1080(full=args.full, movie_filter=args.movie)
+
+    if args.mode in ("tv", "all"):
+        if args.res in ("4k", "both"):
+            if args.src:
+                _sync_engine(
+                    src=Path(args.src),
+                    dest_root=DEST_TV,
+                    cache_last_file=CACHE_DIR / "tv-4k.last",
+                    default_res="2160p",
+                    log_path=LOG_DIR / "sync_tv_4k.log",
+                    is_tv=True,
+                    full=args.full,
+                    filter_show=args.show,
+                    filter_episode=args.episode,
+                )
+            else:
+                sync_tv_4k(full=args.full, show_filter=args.show, episode_filter=args.episode)
+        if args.res in ("1080", "both"):
+            if args.src:
+                _sync_engine(
+                    src=Path(args.src),
+                    dest_root=DEST_TV,
+                    cache_last_file=CACHE_DIR / "tv-1080.last",
+                    default_res="1080p",
+                    log_path=LOG_DIR / "sync_tv_1080.log",
+                    is_tv=True,
+                    full=args.full,
+                    filter_show=args.show,
+                    filter_episode=args.episode,
+                )
+            else:
+                sync_tv_1080(full=args.full, show_filter=args.show, episode_filter=args.episode)
+
+
+if __name__ == "__main__":
+    _cli()
