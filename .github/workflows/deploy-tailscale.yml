@@ -70,21 +70,15 @@ jobs:
 
             git clone 'https://github.com/${GITHUB_REPOSITORY}.git' ~/jellyfin-refresh;
 
+            echo 'Fixing script permissions...';
+            chmod +x ~/jellyfin-refresh/scripts/*.sh;
+
             cd ~/jellyfin-refresh;
 
             echo 'Starting docker compose...';
             IMAGE=${IMAGE} docker compose up -d --remove-orphans
           "
-
-      - name: Make scripts executable
-        env:
-          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
-          REMOTE_USER: ${{ secrets.REMOTE_USER }}
-        run: |
-          echo "Making scripts executable on remote server"
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "chmod +x /opt/docker/jellyfin-refresh/scripts/*.sh"
-
-
+          
       - name: Bring down Tailscale
         if: always()
         run: sudo tailscale down || true
