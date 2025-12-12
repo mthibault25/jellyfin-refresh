@@ -71,14 +71,14 @@ jobs:
             git clone 'https://github.com/${GITHUB_REPOSITORY}.git' ~/jellyfin-refresh;
 
             echo 'Fixing script permissions...';
-            chmod +x ~/jellyfin-refresh/scripts/*.sh;
+            chmod +x ./scripts/*.sh;
 
             cd ~/jellyfin-refresh;
 
             echo 'Starting docker compose...';
             IMAGE=${IMAGE} docker compose up -d --remove-orphans
           "
-          
+
       - name: Bring down Tailscale
         if: always()
         run: sudo tailscale down || true
