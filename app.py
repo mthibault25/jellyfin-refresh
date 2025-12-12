@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv('.env.local', override=True)
 
 # Import unified sync engine
-import media_sync
+from scripts import media_sync
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
