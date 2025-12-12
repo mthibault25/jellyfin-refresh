@@ -9,8 +9,7 @@
       - PYTHONUNBUFFERED=1
     volumes:
       # Mount media folders and symlinks
-      - /mnt/debrid/riven_symlinks:/mnt/debrid/riven_symlinks:ro
-      - /mnt/debrid_1080/riven_symlinks:/mnt/debrid_1080/riven_symlinks:ro
+      - /mnt:/mnt:ro
       - /media/shows:/media/shows
       - /media/movies:/media/movies
       - /opt/docker/logs:/opt/docker/logs
