@@ -15,4 +15,4 @@
       - /media/movies:/media/movies
       - /opt/docker/logs:/opt/docker/logs
       # Mount scripts
-      #- ./scripts:/opt/docker/jellyfin-refresh/scripts:ro
+      - ./scripts:/opt/docker/jellyfin-refresh/scripts:ro

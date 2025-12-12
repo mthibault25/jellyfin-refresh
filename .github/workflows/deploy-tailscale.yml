@@ -12,9 +12,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Ensure scripts are executable
-        run: chmod +x scripts/*.sh
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
@@ -75,11 +72,11 @@ jobs:
 
             echo 'Fixing script permissions...';
             chmod +x /opt/docker/jellyfin-refresh/scripts/*.sh;
+            chmod +x /opt/docker/jellyfin-refresh/scripts/*.py;
 
             cd /opt/docker/jellyfin-refresh;
 
             echo 'Starting docker compose...';
-            IMAGE=${IMAGE} docker compose build --no-cache
             IMAGE=${IMAGE} docker compose up -d --remove-orphans
 
           "
