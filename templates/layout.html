@@ -11,6 +11,7 @@
     <nav>
       <a href="{{ url_for('index') }}">Home</a>
     </nav>
+    <button id="theme-toggle" class="theme-toggle">🌙</button>
   </header>
 
   <main>
@@ -22,6 +23,39 @@
   </footer>
 
   <script>
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute("data-theme");
+    const next = current === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+  }
+
+  //
+  // DARK MODE TOGGLE LOGIC
+  //
+  const root = document.documentElement;
+  const toggleBtn = document.getElementById("theme-toggle");
+
+  // Load saved theme or system preference
+  const saved = localStorage.getItem("theme");
+  if (saved) {
+    root.setAttribute("data-theme", saved);
+    toggleBtn.textContent = saved === "dark" ? "☀️" : "🌙";
+  } else {
+    // match OS
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const theme = prefersDark ? "dark" : "light";
+    root.setAttribute("data-theme", theme);
+    toggleBtn.textContent = prefersDark ? "☀️" : "🌙";
+  }
+
+  toggleBtn.addEventListener("click", () => {
+    const current = root.getAttribute("data-theme");
+    const next = current === "dark" ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    localStorage.setItem("theme", next);
+    toggleBtn.textContent = next === "dark" ? "☀️" : "🌙";
+  });
+
   // helper: stream command output and display inside a <pre> element
   async function streamToPre(url, form=null, preId='output') {
     const pre = document.getElementById(preId)
@@ -63,5 +97,79 @@
     }
   }
   </script>
+  <style>
+  /* ---------- DARK MODE ---------- */
+  html[data-theme="dark"] body {
+    background: #111214;
+    color: #e5e7eb;
+  }
+
+  /* cards / sections */
+  html[data-theme="dark"] .card,
+  html[data-theme="dark"] .season {
+    background: #1b1c1f;
+    color: #e5e7eb;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  }
+
+  /* autocomplete */
+  html[data-theme="dark"] .suggestions {
+    background: #1b1c1f;
+    border-color: #333;
+  }
+  html[data-theme="dark"] .suggestion-item {
+    color: #fff;
+  }
+  html[data-theme="dark"] .suggestion-item:hover {
+    background: #2a2c31;
+  }
+
+  /* labels */
+  html[data-theme="dark"] label {
+    color: #ddd;
+  }
+
+  /* search input */
+  html[data-theme="dark"] input {
+    background: #222;
+    color: #eee;
+    border: 1px solid #444;
+  }
+
+  /* buttons */
+  html[data-theme="dark"] button {
+    background: #2563eb;
+    color: #fff;
+  }
+
+  /* output terminal */
+  html[data-theme="dark"] .output {
+    background: #000;
+    color: #0f0;
+  }
+
+  /* link colors */
+  html[data-theme="dark"] a {
+    color: #60a5fa;
+  }
+
+  /* resolution colors */
+  html[data-theme="dark"] .ep-4k { color: #22c55e; }
+  html[data-theme="dark"] .ep-1080 { color: #60a5fa; }
+  html[data-theme="dark"] .ep-720 { color: #facc15; }
+
+  /* toggle button */
+  .theme-toggle {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    margin-left: auto;
+  }
+  .theme-toggle:hover {
+    opacity: 0.8;
+  }
+  </style>
+
 </body>
 </html>
