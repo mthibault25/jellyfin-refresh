@@ -1,6 +1,4 @@
-﻿version: '3.8'
-
-services:
+﻿services:
   app:
     image: ${IMAGE:-jellyfin-refresh:latest}
     container_name: jellyfin-refresh
