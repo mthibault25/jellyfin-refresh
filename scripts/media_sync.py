@@ -211,9 +211,6 @@ def atomic_symlink(target: Path, dest: Path) -> None:
                 pass
 
 
-# -----------------------------------------------------------
-# Generic sync engine (parameterized)
-# -----------------------------------------------------------
 def _sync_engine(
     *,
     src: Path,
@@ -226,26 +223,31 @@ def _sync_engine(
     filter_show: Optional[str] = None,
     filter_episode: Optional[str] = None,
     filter_movie: Optional[str] = None,
-) -> bool:
+):
     """
-    Core sync routine. Returns True if any processing happened (for timestamp update decision).
-    This function is shared by TV and Movies flows.
+    Core sync routine. Yields log lines for UI streaming.
+    Never returns booleans.
     """
     logger = _make_logger(log_path.stem, log_path)
+
+    def out(msg: str):
+        logger.info(msg)
+        yield msg + "\n"
 
     # header
     now_human = time.strftime("%Y-%m-%d %H:%M:%S")
     kind = "TV" if is_tv else "MOVIE"
-    logger.info("")
-    logger.info(f"================ {kind} SYNC: {now_human} ================")
-    logger.info("")
+
+    yield from out("")
+    yield from out(f"================ {kind} SYNC: {now_human} ================")
+    yield from out("")
 
     # ensure last file exists
     cache_last_file.parent.mkdir(parents=True, exist_ok=True)
     cache_last_file.touch(exist_ok=True)
 
-    # determine prev_ts and whether to update last file
     update_last_file = True
+
     if full or filter_show or filter_episode or filter_movie:
         prev_ts = 0
         update_last_file = False
@@ -257,31 +259,32 @@ def _sync_engine(
 
     now_ts = int(time.time())
 
-    logger.info(f"{kind} SYNC:")
-    logger.info(f" SRC          = {src}")
-    logger.info(f" PREV_TS      = {prev_ts}")
-    logger.info(f" FULL MODE    = {full}")
+    yield from out(f"{kind} SYNC:")
+    yield from out(f" SRC          = {src}")
+    yield from out(f" PREV_TS      = {prev_ts}")
+    yield from out(f" FULL MODE    = {full}")
+
     if is_tv:
-        logger.info(f" FILTER_SHOW  = '{filter_show}'")
-        logger.info(f" FILTER_EP    = '{filter_episode}'")
+        yield from out(f" FILTER_SHOW  = '{filter_show}'")
+        yield from out(f" FILTER_EP    = '{filter_episode}'")
     else:
-        logger.info(f" FILTER_MOVIE = '{filter_movie}'")
-    logger.info("")
+        yield from out(f" FILTER_MOVIE = '{filter_movie}'")
+
+    yield from out("")
 
     processed_any = False
-
     symlinks = find_symlinks_sorted(src)
 
-    # iterate
     for ts, link in symlinks:
-        # early filter checks
+
+        # movie filter
         if filter_movie and not is_tv:
             movie_name = Path(link).parent.name
             if movie_name != filter_movie:
                 continue
 
+        # show filter
         if filter_show and is_tv:
-            # show is parent of parent
             try:
                 show_name = Path(link).parent.parent.name
             except Exception:
@@ -289,58 +292,56 @@ def _sync_engine(
             if show_name != filter_show:
                 continue
 
-        # early stop logic (fast mode)
+        # stop early
         if update_last_file and ts <= prev_ts:
-            logger.info("Stopping early: symlink <= last-run")
+            yield from out("Stopping early: symlink <= last-run")
             break
 
-        logger.info(f"NEW: {link}")
+        yield from out(f"NEW: {link}")
 
-        # process link
         try:
             link_path = Path(link)
             basename = link_path.name
 
-            # resolve real file
+            # resolve target
             try:
                 target = link_path.resolve(strict=True)
             except FileNotFoundError:
-                logger.info(f"Broken symlink: {link}")
+                yield from out(f"Broken symlink: {link}")
                 continue
 
-            # tv: derive show & season
+            # tv seasons
             if is_tv:
                 show_dir = link_path.parent.parent.name
                 season_dir = link_path.parent.name
             else:
                 movie_name = link_path.parent.name
 
-            # episode filter if tv
+            # ep filter
             if is_tv and filter_episode:
                 m = re.search(r"([Ss]\d{2}[Ee]\d{2})", basename)
                 ep = m.group(1) if m else ""
                 if ep != filter_episode:
                     continue
 
-            # detect resolution
+            # resolution detection
             res = detect_resolution(str(target), default_res)
 
-            # rename if missing resolution in symlink name
             if res not in basename:
                 name, ext = os.path.splitext(basename)
                 new_name = f"{name} - {res}{ext}"
                 new_link = link_path.parent / new_name
+
                 try:
                     link_path.rename(new_link)
-                    logger.info(f" RENAMED: {new_name}")
+                    yield from out(f" RENAMED: {new_name}")
                     link_path = new_link
                     basename = new_name
                     processed_any = True
                 except Exception as e:
-                    logger.info(f" Rename failed {link} -> {new_name}: {e}")
-                    # continue processing with original link_path if rename failed
+                    yield from out(f" Rename failed {link} -> {new_name}: {e}")
 
-            # create destination path
+            # dest path
             if is_tv:
                 dest_path = dest_root / show_dir / season_dir / basename
             else:
@@ -349,37 +350,38 @@ def _sync_engine(
             dest_path.parent.mkdir(parents=True, exist_ok=True)
 
             if dest_path.exists() or dest_path.is_symlink():
-                logger.info(f" Already linked: {dest_path}")
+                yield from out(f" Already linked: {dest_path}")
                 continue
 
-            # atomic symlink creation
             try:
                 atomic_symlink(target, dest_path)
-                logger.info(f" Linked: {dest_path}")
+                yield from out(f" Linked: {dest_path}")
                 processed_any = True
             except Exception as e:
-                logger.info(f" Link failed: {dest_path}: {e}")
+                yield from out(f" Link failed: {dest_path}: {e}")
                 continue
 
         except Exception as exc:
-            logger.info(f"Error processing {link}: {exc}")
+            yield from out(f"Error processing {link}: {exc}")
             continue
 
-    # timestamp update decisions
+    # timestamps
     if update_last_file and processed_any:
         try:
             cache_last_file.write_text(str(now_ts))
             human = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now_ts))
-            logger.info(f"Updated timestamp: {human} ({now_ts})")
+            yield from out(f"Updated timestamp: {human} ({now_ts})")
         except Exception as e:
-            logger.info(f"Failed to update timestamp file {cache_last_file}: {e}")
-    elif update_last_file and not processed_any:
-        logger.info("No changes detected; timestamp not updated.")
-    else:
-        logger.info("Skipped timestamp update (targeted or full refresh).")
+            yield from out(f"Failed to update timestamp file {cache_last_file}: {e}")
 
-    logger.info(f"{kind} SYNC COMPLETE")
-    return processed_any
+    elif update_last_file and not processed_any:
+        yield from out("No changes detected; timestamp not updated.")
+
+    else:
+        yield from out("Skipped timestamp update (targeted or full refresh).")
+
+    yield from out(f"{kind} SYNC COMPLETE\n")
+
 
 
 # -----------------------------------------------------------
