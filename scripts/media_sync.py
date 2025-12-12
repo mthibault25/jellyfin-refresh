@@ -19,10 +19,10 @@ Also supports CLI usage when run directly:
   ./media_sync.py --mode tv --res 1080 --show "My Show" --episode S01E01
 
 Logging:
-  /opt/docker/logs/sync_tv_4k.log
-  /opt/docker/logs/sync_tv_1080.log
-  /opt/docker/logs/sync_movie_4k.log
-  /opt/docker/logs/sync_movie_1080.log
+  /opt/docker/logs/tv_4k.log
+  /opt/docker/logs/tv_1080.log
+  /opt/docker/logs/movie_4k.log
+  /opt/docker/logs/movie_1080.log
 """
 from __future__ import annotations
 import os
@@ -393,7 +393,7 @@ def sync_movies_4k(full: bool = False, movie_filter: Optional[str] = None) -> bo
         dest_root=DEST_MOVIES,
         cache_last_file=CACHE_DIR / "movies-4k.last",
         default_res="2160p",
-        log_path=LOG_DIR / "sync_movie_4k.log",
+        log_path=LOG_DIR / "movie_4k.log",
         is_tv=False,
         full=full,
         filter_movie=movie_filter,
@@ -406,7 +406,7 @@ def sync_movies_1080(full: bool = False, movie_filter: Optional[str] = None) -> 
         dest_root=DEST_MOVIES,
         cache_last_file=CACHE_DIR / "movies-1080.last",
         default_res="1080p",
-        log_path=LOG_DIR / "sync_movie_1080.log",
+        log_path=LOG_DIR / "movie_1080.log",
         is_tv=False,
         full=full,
         filter_movie=movie_filter,
@@ -419,7 +419,7 @@ def sync_tv_4k(full: bool = False, show_filter: Optional[str] = None, episode_fi
         dest_root=DEST_TV,
         cache_last_file=CACHE_DIR / "tv-4k.last",
         default_res="2160p",
-        log_path=LOG_DIR / "sync_tv_4k.log",
+        log_path=LOG_DIR / "tv_4k.log",
         is_tv=True,
         full=full,
         filter_show=show_filter,
@@ -433,7 +433,7 @@ def sync_tv_1080(full: bool = False, show_filter: Optional[str] = None, episode_
         dest_root=DEST_TV,
         cache_last_file=CACHE_DIR / "tv-1080.last",
         default_res="1080p",
-        log_path=LOG_DIR / "sync_tv_1080.log",
+        log_path=LOG_DIR / "tv_1080.log",
         is_tv=True,
         full=full,
         filter_show=show_filter,
@@ -508,7 +508,7 @@ def _cli():
                     dest_root=DEST_MOVIES,
                     cache_last_file=CACHE_DIR / "movies-4k.last",
                     default_res="2160p",
-                    log_path=LOG_DIR / "sync_movie_4k.log",
+                    log_path=LOG_DIR / "movie_4k.log",
                     is_tv=False,
                     full=args.full,
                     filter_movie=args.movie,
@@ -522,7 +522,7 @@ def _cli():
                     dest_root=DEST_MOVIES,
                     cache_last_file=CACHE_DIR / "movies-1080.last",
                     default_res="1080p",
-                    log_path=LOG_DIR / "sync_movie_1080.log",
+                    log_path=LOG_DIR / "movie_1080.log",
                     is_tv=False,
                     full=args.full,
                     filter_movie=args.movie,
@@ -538,7 +538,7 @@ def _cli():
                     dest_root=DEST_TV,
                     cache_last_file=CACHE_DIR / "tv-4k.last",
                     default_res="2160p",
-                    log_path=LOG_DIR / "sync_tv_4k.log",
+                    log_path=LOG_DIR / "tv_4k.log",
                     is_tv=True,
                     full=args.full,
                     filter_show=args.show,
@@ -553,7 +553,7 @@ def _cli():
                     dest_root=DEST_TV,
                     cache_last_file=CACHE_DIR / "tv-1080.last",
                     default_res="1080p",
-                    log_path=LOG_DIR / "sync_tv_1080.log",
+                    log_path=LOG_DIR / "tv_1080.log",
                     is_tv=True,
                     full=args.full,
                     filter_show=args.show,
