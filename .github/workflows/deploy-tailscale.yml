@@ -61,7 +61,7 @@ jobs:
         run: |
           echo "Deploying to ${REMOTE_USER}@${REMOTE_HOST} via Tailscale SSH using docker-compose"
           # Ensure repository is present on the remote host (clone if missing, otherwise pull)
-          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "set -e; git --version >/dev/null 2>&1 || (echo 'git not installed on remote host'; exit 1); if [ -d /opt/docker/jellyfin-refresh/.git ]; then echo 'Repo exists on remote: pulling latest'; cd /opt/docker/jellyfin-refresh && git pull --rebase || true; else echo 'Cloning repo to /opt/docker/jellyfin-refresh'; git clone https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git /opt/docker/jellyfin-refresh; fi; cd /opt/docker/jellyfin-refresh; docker pull ${IMAGE} || true; docker compose down || true; IMAGE=${IMAGE} docker compose up -d --remove-orphans"
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "set -e; git --version >/dev/null 2>&1 || (echo 'git not installed on remote host'; exit 1); if [ -d /opt/docker/jellyfin-refresh/.git ]; then echo 'Repo exists on remote: removing to clone latest'; rm -r /opt/docker/jellyfin-refresh && git clone https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git /opt/docker/jellyfin-refresh; || true; else echo 'Cloning repo to /opt/docker/jellyfin-refresh'; git clone https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git /opt/docker/jellyfin-refresh; fi; cd /opt/docker/jellyfin-refresh; docker pull ${IMAGE} || true; docker compose down || true; IMAGE=${IMAGE} docker compose up -d --remove-orphans"
       
       - name: Make scripts executable
         env:
