@@ -14,5 +14,6 @@ services:
       - /mnt/debrid_1080/riven_symlinks:/mnt/debrid_1080/riven_symlinks:ro
       - /media/shows:/media/shows
       - /media/movies:/media/movies
+      - /opt/docker/logs:/opt/docker/logs
       # Mount scripts
       #- ./scripts:/opt/docker/jellyfin-refresh/scripts:ro
