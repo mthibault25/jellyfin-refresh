@@ -11,8 +11,13 @@
   </div>
 
   {% for season in seasons %}
-    <div class="season">
-      <h3>{{ season }}</h3>
+  <div class="season collapsible">
+    <button class="collapse-toggle" onclick="toggleSeason(this)">
+      <span>{{ season }}</span>
+      <span class="arrow">▾</span>
+    </button>
+
+    <div class="season-content">
       <ul>
         {% for ep in list_episodes(show, season) %}
           {% set lower = ep.lower() %}
@@ -28,7 +33,79 @@
         {% endfor %}
       </ul>
     </div>
-  {% endfor %}
+  </div>
+{% endfor %}
 
   <pre id="output" class="output"></pre>
+
+<script>
+  function toggleSeason(btn) {
+    const content = btn.nextElementSibling;
+    const arrow = btn.querySelector(".arrow");
+
+    if (content.style.maxHeight) {
+      // collapse
+      content.style.maxHeight = null;
+      arrow.textContent = "▾";
+    } else {
+      // expand
+      content.style.maxHeight = content.scrollHeight + "px";
+      arrow.textContent = "▴";
+    }
+  }
+</script>
+<style>
+  /* Collapsible Season Sections */
+  .collapsible {
+    margin-bottom: 14px;
+    border-radius: 8px;
+    background: var(--season-bg, #fff);
+    overflow: hidden;
+  }
+
+  /* Button header */
+  .collapse-toggle {
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 10px 12px;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 17px;
+    font-weight: 600;
+  }
+
+  .collapse-toggle:hover {
+    opacity: 0.8;
+  }
+
+  .arrow {
+    font-size: 18px;
+  }
+
+  /* The collapsible body */
+  .season-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease-out;
+    padding: 0 12px;
+  }
+
+  /* Dark mode support */
+  html[data-theme="dark"] .collapsible {
+    background: #1b1c1f;
+  }
+
+  html[data-theme="dark"] .collapse-toggle {
+    color: #e5e7eb;
+  }
+
+  html[data-theme="dark"] .arrow {
+    color: #e5e7eb;
+  }
+</style>
+
 {% endblock %}
