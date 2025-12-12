@@ -77,6 +77,10 @@ jobs:
 
             echo 'Starting docker compose...';
             IMAGE=${IMAGE} docker compose up -d --remove-orphans
+
+            docker exec -it jellyfin-refresh bash
+            chmod +x ./scripts/*.sh
+            exit
           "
 
       - name: Bring down Tailscale
