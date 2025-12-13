@@ -11,7 +11,8 @@ load_dotenv('.env.local', override=True)
 from scripts import media_sync
 
 # Media watcher
-import scripts.media_watcher as media_watcher
+from scripts import auto_runner
+import threading
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
@@ -28,6 +29,11 @@ else:
     BASENAME_1080 = "/mnt/debrid_1080/riven_symlinks"
     MEDIA_SHOWS = "/media/shows"
     MEDIA_MOVIES = "/media/movies"
+
+threading.Thread(
+    target=auto_runner.loop,
+    daemon=True
+).start()
 
 ###############################################################################
 # Helpers
@@ -184,15 +190,15 @@ def ui():
 ###############################################################################
 # Media watcher endpoints
 ###############################################################################
-@app.route("/watcher/start", methods=["POST"])
-def start_watcher_route():
-    media_watcher.start_watcher()
-    return "Watcher started\n"
+# @app.route("/watcher/start", methods=["POST"])
+# def start_watcher_route():
+#     media_watcher.start_watcher()
+#     return "Watcher started\n"
 
-@app.route("/watcher/stop", methods=["POST"])
-def stop_watcher_route():
-    media_watcher.stop()
-    return "Watcher stopping\n"
+# @app.route("/watcher/stop", methods=["POST"])
+# def stop_watcher_route():
+#     media_watcher.stop()
+#     return "Watcher stopping\n"
 
 ###############################################################################
 
