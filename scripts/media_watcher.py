@@ -3,7 +3,7 @@ import hashlib
 from pathlib import Path
 import threading
 
-import media_sync
+from scripts import media_sync
 
 WATCH_PATHS = {
     "tv_4k": Path("/mnt/debrid/riven_symlinks/tv_4k"),
