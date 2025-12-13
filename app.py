@@ -10,6 +10,9 @@ load_dotenv('.env.local', override=True)
 # Import unified sync engine
 from scripts import media_sync
 
+# Media watcher
+import scripts.media_watcher as media_watcher
+
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
 # CONFIG - edit if your paths differ
@@ -177,6 +180,19 @@ def static_files(filename):
 @app.route('/ui')
 def ui():
     return redirect(url_for('index'))
+
+###############################################################################
+# Media watcher endpoints
+###############################################################################
+@app.route("/watcher/start", methods=["POST"])
+def start_watcher_route():
+    media_watcher.start_watcher()
+    return "Watcher started\n"
+
+@app.route("/watcher/stop", methods=["POST"])
+def stop_watcher_route():
+    media_watcher.stop()
+    return "Watcher stopping\n"
 
 ###############################################################################
 
