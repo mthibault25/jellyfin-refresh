@@ -35,6 +35,7 @@ import stat
 import re
 import argparse
 from typing import List, Tuple, Optional, Callable
+import shutil
 
 # -----------------------------------------------------------
 # ENV / DEFAULT PATHS (confirmed)
@@ -214,6 +215,14 @@ def atomic_symlink(target: Path, dest: Path) -> None:
             except Exception:
                 pass
 
+def wipe_dest_folder(path: Path, logger):
+    if not path.exists():
+        return
+    logger.info(f"Removing destination folder: {path}")
+    try:
+        shutil.rmtree(path)
+    except Exception as e:
+        logger.info(f"Failed to remove {path}: {e}")
 
 def _sync_engine(
     *,
@@ -245,6 +254,18 @@ def _sync_engine(
     yield from out("")
     yield from out(f"================ {kind} SYNC: {now_human} ================")
     yield from out("")
+
+    # destructive refresh for targeted runs
+    if is_tv and filter_show:
+        dest_show = dest_root / filter_show
+        yield from out(f"Removing destination folder: {dest_show}")
+        wipe_dest_folder(dest_show, logger)
+
+    if not is_tv and filter_movie:
+        dest_movie = dest_root / filter_movie
+        yield from out(f"Removing destination folder: {dest_movie}")
+        wipe_dest_folder(dest_movie, logger)
+
 
     # ensure last file exists
     cache_last_file.parent.mkdir(parents=True, exist_ok=True)
@@ -301,9 +322,6 @@ def _sync_engine(
             yield from out("Stopping early: symlink <= last-run")
             break
 
-        yield from out(f"NEW: {link}")
-        processed_any = True
-
         try:
             link_path = Path(link)
             basename = link_path.name
@@ -328,6 +346,8 @@ def _sync_engine(
                 ep = m.group(1) if m else ""
                 if ep != filter_episode:
                     continue
+
+            yield from out(f"NEW: {link}")
 
             # resolution detection
             res = detect_resolution(str(target), default_res)
