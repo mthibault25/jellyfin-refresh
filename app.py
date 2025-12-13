@@ -50,6 +50,9 @@ def safe_listdir(path):
 def list_shows():
     return safe_listdir(MEDIA_SHOWS)
 
+def list_movies():
+    return safe_listdir(MEDIA_MOVIES)
+
 def list_movie(movie):
     # movie_dir = Path(MEDIA_MOVIES) / movie
     # if not movie_dir.exists():
@@ -120,7 +123,7 @@ def movie_page(movie):
     return render_template(
         'movie.html',
         movie=movie,
-        files=list_movie_files(movie)
+        files=list_movie(movie)
     )
 
 ###############################################################################
