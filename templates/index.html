@@ -22,6 +22,7 @@
         <input id="movie-search" type="text" placeholder="Start typing a movie name..." autocomplete="off" />
         <div id="movie-suggestions" class="suggestions" role="listbox" aria-label="Movie suggestions"></div>
         <div id="movie-actions" class="suggestion-actions" style="display:none">
+          <a id="movie-link" href="#">Open movie page</a>
           <button id="movie-refresh">Refresh this movie</button>
         </div>
       </div>
@@ -56,6 +57,7 @@
   const minput = document.getElementById('movie-search');
   const msuggBox = document.getElementById('movie-suggestions');
   const mactions = document.getElementById('movie-actions');
+  const mlink = document.getElementById('movie-link');
   const mrefreshBtn = document.getElementById('movie-refresh');
   let selectedMovie = null;
 
@@ -127,12 +129,15 @@
 
   // movie selection and refresh
   function selectMovie(name) {
-    selectedMovie = name;
-    minput.value = name;
-    msuggBox.innerHTML = '';
-    msuggBox.style.display = 'none';
-    mactions.style.display = 'block';
-  }
+  selectedMovie = name;
+  minput.value = name;
+  msuggBox.innerHTML = '';
+  msuggBox.style.display = 'none';
+  mactions.style.display = 'block';
+
+  // set link to open movie page
+  mlink.href = '/movie/' + encodeURIComponent(name);
+}
 
   mrefreshBtn.addEventListener('click', (e) => {
     e.preventDefault();
@@ -143,6 +148,12 @@
 
   <style>
   .suggestions { border: 1px solid #ccc; max-height: 240px; overflow:auto; display:none; background:#fff; }
+  .suggestion-actions a {
+  margin-right: 8px;
+  color: #0a66c2;
+  text-decoration: none;
+  font-weight: 600;
+}
   .suggestion-item { padding:8px; cursor:pointer; }
   .suggestion-item:hover { background:#eee; }
   .suggestion-actions { margin-top:8px; }
