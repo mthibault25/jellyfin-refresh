@@ -50,11 +50,16 @@ def safe_listdir(path):
 def list_shows():
     return safe_listdir(MEDIA_SHOWS)
 
-def list_movie_files(movie):
-    movie_dir = Path(MEDIA_MOVIES) / movie
-    if not movie_dir.exists():
+def list_movie(movie):
+    # movie_dir = Path(MEDIA_MOVIES) / movie
+    # if not movie_dir.exists():
+    #     return []
+    # return sorted(p.name for p in movie_dir.iterdir() if p.is_symlink())
+    base = os.path.join(MEDIA_MOVIES, movie)
+    try:
+        return sorted([d for d in os.listdir(base) if os.path.isdir(os.path.join(base, d))])
+    except FileNotFoundError:
         return []
-    return sorted(p.name for p in movie_dir.iterdir() if p.is_symlink())
 
 def list_seasons(show):
     base = os.path.join(MEDIA_SHOWS, show)
