@@ -14,6 +14,8 @@ from scripts import media_sync
 from scripts import auto_runner
 import threading
 
+from pathlib import Path
+
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
 # CONFIG - edit if your paths differ
@@ -48,8 +50,11 @@ def safe_listdir(path):
 def list_shows():
     return safe_listdir(MEDIA_SHOWS)
 
-def list_movies():
-    return safe_listdir(MEDIA_MOVIES)
+def list_movie_files(movie):
+    movie_dir = Path(MEDIA_MOVIES) / movie
+    if not movie_dir.exists():
+        return []
+    return sorted(p.name for p in movie_dir.iterdir() if p.is_symlink())
 
 def list_seasons(show):
     base = os.path.join(MEDIA_SHOWS, show)
@@ -104,6 +109,14 @@ def show_page(show):
                            show=show,
                            seasons=list_seasons(show),
                            list_episodes=list_episodes)
+
+@app.route('/movie/<path:movie>')
+def movie_page(movie):
+    return render_template(
+        'movie.html',
+        movie=movie,
+        files=list_movie_files(movie)
+    )
 
 ###############################################################################
 # Run refresh endpoints (NO subprocess — mounted directly to Python functions)
