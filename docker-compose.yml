@@ -10,6 +10,7 @@
     volumes:
       # Mount media folders and symlinks
       - /mnt:/mnt
+      - /opt/riven_cache:/opt/riven_cache
       - /media/shows:/media/shows
       - /media/movies:/media/movies
       - /opt/docker/logs:/opt/docker/logs
