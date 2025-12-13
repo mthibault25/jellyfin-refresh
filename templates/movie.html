@@ -1,0 +1,81 @@
+{% extends "layout.html" %}
+
+{% block content %}
+  <h2>Movies</h2>
+
+  {% for movie in movies %}
+  <div class="movie collapsible">
+    <button class="collapse-toggle" onclick="toggleMovie(this)">
+      <span>{{ movie }}</span>
+      <span class="arrow">▾</span>
+    </button>
+
+    <div class="movie-content">
+      <div class="movie-actions">
+        <form onsubmit="event.preventDefault(); streamToPre('/run/refresh_movie', {'movie': '{{ movie }}'}, 'output')">
+          <button type="submit">Refresh this movie</button>
+        </form>
+      </div>
+
+      <ul>
+        {% for file in list_movie_files(movie) %}
+          {% set lower = file.lower() %}
+          {% if '2160' in lower or '4k' in lower or 'uhd' in lower %}
+            <li class="ep ep-4k">{{ file }}</li>
+          {% elif '1080' in lower %}
+            <li class="ep ep-1080">{{ file }}</li>
+          {% elif '720' in lower %}
+            <li class="ep ep-720">{{ file }}</li>
+          {% else %}
+            <li class="ep">{{ file }}</li>
+          {% endif %}
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endfor %}
+
+  <pre id="output" class="output"></pre>
+
+<script>
+  function toggleMovie(btn) {
+    const content = btn.nextElementSibling;
+    const arrow = btn.querySelector(".arrow");
+
+    if (content.style.maxHeight) {
+      content.style.maxHeight = null;
+      arrow.textContent = "▾";
+    } else {
+      content.style.maxHeight = content.scrollHeight + "px";
+      arrow.textContent = "▴";
+    }
+  }
+</script>
+
+<style>
+  /* Collapsible Movie Sections */
+  .movie.collapsible {
+    margin-bottom: 14px;
+    border-radius: 8px;
+    background: var(--season-bg, #fff);
+    overflow: hidden;
+  }
+
+  .movie-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease-out;
+    padding: 0 12px;
+  }
+
+  .movie-actions {
+    margin: 10px 0;
+  }
+
+  /* Dark mode */
+  html[data-theme="dark"] .movie.collapsible {
+    background: #1b1c1f;
+  }
+</style>
+
+{% endblock %}

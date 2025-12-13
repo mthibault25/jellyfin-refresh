@@ -71,6 +71,13 @@ def list_episodes(show, season):
         pass
     return episodes
 
+def list_movie_files(movie):
+    movie_dir = MEDIA_MOVIES / movie
+    if not movie_dir.exists():
+        return []
+    return sorted(p.name for p in movie_dir.iterdir() if p.is_symlink())
+
+
 ###############################################################################
 # Streaming wrapper — yields lines from Python generator
 ###############################################################################
