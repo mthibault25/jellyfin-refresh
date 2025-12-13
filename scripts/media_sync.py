@@ -302,6 +302,7 @@ def _sync_engine(
             break
 
         yield from out(f"NEW: {link}")
+        processed_any = True
 
         try:
             link_path = Path(link)
