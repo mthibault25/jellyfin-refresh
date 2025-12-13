@@ -9,7 +9,7 @@
       - PYTHONUNBUFFERED=1
     volumes:
       # Mount media folders and symlinks
-      - /mnt:/mnt:
+      - /mnt:/mnt
       - /media/shows:/media/shows
       - /media/movies:/media/movies
       - /opt/docker/logs:/opt/docker/logs
