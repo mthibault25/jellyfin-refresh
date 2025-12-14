@@ -228,6 +228,10 @@ def wipe_dest_folder(path: Path, logger):
     except Exception as e:
         logger.info(f"Failed to remove {path}: {e}")
 
+def already_tagged(name: str) -> bool:
+    return bool(re.search(r"\s-\s(2160p|1080p|720p)", name))
+
+
 def _sync_engine(
     *,
     src: Path,
@@ -360,26 +364,24 @@ def _sync_engine(
             # resolution detection
             res = detect_resolution(str(target), default_res)
 
-            # If link was already renamed by another pass, skip rename
-            if f" - {res}" not in basename:
+            # rename only if file has NEVER been tagged
+            if not already_tagged(basename):
+                res = detect_resolution(str(target), default_res)
+
                 name, ext = os.path.splitext(basename)
                 new_name = f"{name} - {res}{ext}"
                 new_link = link_path.parent / new_name
 
-                if new_link.exists():
-                    # Another sync pass already renamed it
+                try:
+                    link_path.rename(new_link)
+                    yield from out(f" RENAMED: {new_name}")
                     link_path = new_link
                     basename = new_name
-                else:
-                    try:
-                        link_path.rename(new_link)
-                        yield from out(f" RENAMED: {new_name}")
-                        link_path = new_link
-                        basename = new_name
-                        processed_any = True
-                    except FileNotFoundError:
-                        # Expected when another pass renamed it first
-                        continue
+                    processed_any = True
+                except FileNotFoundError:
+                    # stale snapshot — safe to ignore
+                    continue
+
 
             # dest path
             if is_tv:
