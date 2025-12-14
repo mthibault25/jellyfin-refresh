@@ -236,7 +236,9 @@ def _sync_engine(
     filter_show: Optional[str] = None,
     filter_episode: Optional[str] = None,
     filter_movie: Optional[str] = None,
+    wipe_dest: bool = False,
 ):
+
     """
     Core sync routine. Yields log lines for UI streaming.
     Never returns booleans.
@@ -256,15 +258,17 @@ def _sync_engine(
     yield from out("")
 
     # destructive refresh for targeted runs
-    if is_tv and filter_show:
-        dest_show = dest_root / filter_show
-        yield from out(f"Removing destination folder: {dest_show}")
-        wipe_dest_folder(dest_show, logger)
+    if wipe_dest:
+        if is_tv and filter_show:
+            dest_show = dest_root / filter_show
+            yield from out(f"Removing destination folder: {dest_show}")
+            wipe_dest_folder(dest_show, logger)
 
-    if not is_tv and filter_movie:
-        dest_movie = dest_root / filter_movie
-        yield from out(f"Removing destination folder: {dest_movie}")
-        wipe_dest_folder(dest_movie, logger)
+        if not is_tv and filter_movie:
+            dest_movie = dest_root / filter_movie
+            yield from out(f"Removing destination folder: {dest_movie}")
+            wipe_dest_folder(dest_movie, logger)
+
 
 
     # ensure last file exists
@@ -412,7 +416,7 @@ def _sync_engine(
 # -----------------------------------------------------------
 # Public convenience wrappers
 # -----------------------------------------------------------
-def sync_movies_4k(full: bool = False, movie_filter: Optional[str] = None) -> bool:
+def sync_movies_4k(full=False, movie_filter=None, wipe_dest=False):
     return _sync_engine(
         src=SRC_MOVIES_4K,
         dest_root=DEST_MOVIES,
@@ -422,10 +426,11 @@ def sync_movies_4k(full: bool = False, movie_filter: Optional[str] = None) -> bo
         is_tv=False,
         full=full,
         filter_movie=movie_filter,
+        wipe_dest=wipe_dest,
     )
 
 
-def sync_movies_1080(full: bool = False, movie_filter: Optional[str] = None) -> bool:
+def sync_movies_1080(full=False, movie_filter=None):
     return _sync_engine(
         src=SRC_MOVIES_1080,
         dest_root=DEST_MOVIES,
@@ -435,7 +440,9 @@ def sync_movies_1080(full: bool = False, movie_filter: Optional[str] = None) -> 
         is_tv=False,
         full=full,
         filter_movie=movie_filter,
+        wipe_dest=False,  # 👈 NEVER wipe here
     )
+
 
 
 def sync_tv_4k(full: bool = False, show_filter: Optional[str] = None, episode_filter: Optional[str] = None) -> bool:

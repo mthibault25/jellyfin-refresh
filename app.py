@@ -59,10 +59,16 @@ def list_movie(movie):
     #     return []
     # return sorted(p.name for p in movie_dir.iterdir() if p.is_symlink())
     base = os.path.join(MEDIA_MOVIES, movie)
+    movies = []
     try:
-        return sorted([d for d in os.listdir(base) if os.path.isdir(os.path.join(base, d))])
+        for f in sorted(os.listdir(base)):
+            p = os.path.join(base, f)
+            if os.path.isfile(p) or os.path.islink(p):
+                if f.lower().endswith((".mkv", ".mp4")):
+                    movies.append(f)
     except FileNotFoundError:
-        return []
+        pass
+    return movies
 
 def list_seasons(show):
     base = os.path.join(MEDIA_SHOWS, show)
@@ -138,7 +144,7 @@ def refresh_show():
 
     def gen():
         yield f"=== Refreshing TV show: {show} (4K) ==="
-        for line in media_sync.sync_tv_4k(show_filter=show):
+        for line in media_sync.sync_tv_4k(show_filter=show, wipe_dest=True):
             yield line
 
         yield ""
@@ -156,7 +162,7 @@ def refresh_movie():
 
     def gen():
         yield f"=== Refreshing movie: {movie} (4K) ==="
-        for line in media_sync.sync_movies_4k(movie_filter=movie):
+        for line in media_sync.sync_movies_4k(movie_filter=movie, wipe_dest=True):
             yield line
 
         yield ""
@@ -165,6 +171,7 @@ def refresh_movie():
             yield line
 
     return stream_python(gen)
+
 
 @app.route('/run/refresh_all', methods=['POST'])
 def refresh_all():
