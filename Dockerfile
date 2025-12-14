@@ -19,4 +19,4 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 5000
 
 # Use gunicorn for production-ish serving
-CMD ["gunicorn", "app:app", "-b", "0.0.0.0:5000", "--workers", "2"]
+CMD ["gunicorn", "app:app", "-b", "0.0.0.0:5000", "--workers", "1"]
