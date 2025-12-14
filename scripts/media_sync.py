@@ -360,19 +360,26 @@ def _sync_engine(
             # resolution detection
             res = detect_resolution(str(target), default_res)
 
-            if res not in basename:
+            # If link was already renamed by another pass, skip rename
+            if f" - {res}" not in basename:
                 name, ext = os.path.splitext(basename)
                 new_name = f"{name} - {res}{ext}"
                 new_link = link_path.parent / new_name
 
-                try:
-                    link_path.rename(new_link)
-                    yield from out(f" RENAMED: {new_name}")
+                if new_link.exists():
+                    # Another sync pass already renamed it
                     link_path = new_link
                     basename = new_name
-                    processed_any = True
-                except Exception as e:
-                    yield from out(f" Rename failed {link} -> {new_name}: {e}")
+                else:
+                    try:
+                        link_path.rename(new_link)
+                        yield from out(f" RENAMED: {new_name}")
+                        link_path = new_link
+                        basename = new_name
+                        processed_any = True
+                    except FileNotFoundError:
+                        # Expected when another pass renamed it first
+                        continue
 
             # dest path
             if is_tv:
