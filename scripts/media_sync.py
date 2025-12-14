@@ -452,12 +452,12 @@ def sync_movies_1080(full=False, movie_filter=None):
             is_tv=False,
             full=full,
             filter_movie=movie_filter,
-            wipe_dest=False,  # 👈 NEVER wipe here
+            wipe_dest=False,
         )
 
 
 
-def sync_tv_4k(full: bool = False, show_filter: Optional[str] = None, episode_filter: Optional[str] = None) -> bool:
+def sync_tv_4k(full: bool = False, show_filter: Optional[str] = None, episode_filter: Optional[str] = None, wipe_dest=False) -> bool:
     return _sync_engine(
             src=SRC_TV_4K,
             dest_root=DEST_TV,
@@ -468,6 +468,7 @@ def sync_tv_4k(full: bool = False, show_filter: Optional[str] = None, episode_fi
             full=full,
             filter_show=show_filter,
             filter_episode=episode_filter,
+            wipe_dest=wipe_dest,
     )
 
 
@@ -482,6 +483,7 @@ def sync_tv_1080(full: bool = False, show_filter: Optional[str] = None, episode_
             full=full,
             filter_show=show_filter,
             filter_episode=episode_filter,
+            wipe_dest=False,
         )
 
 
