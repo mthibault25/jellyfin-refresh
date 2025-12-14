@@ -76,24 +76,28 @@ def _make_logger(name: str, log_path: Path) -> logging.Logger:
     The format is kept minimal to match your existing scripts.
     """
     logger = logging.getLogger(name)
-    if logger.handlers:
-        return logger  # already configured
-
     logger.setLevel(logging.INFO)
+
+    # 🔑 CRITICAL FIX: prevent handler duplication
+    if logger.handlers:
+        return logger
+
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
     formatter = logging.Formatter("%(message)s")
 
-    fh = logging.FileHandler(log_path, mode="a")
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
+    file_handler = logging.FileHandler(log_path, mode="a")
+    file_handler.setFormatter(formatter)
 
-    sh = logging.StreamHandler(sys.stdout)
-    sh.setFormatter(formatter)
-    logger.addHandler(sh)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
 
-    # don't propagate to root
+    logger.addHandler(file_handler)
+    logger.addHandler(stream_handler)
+
+    # Prevent double logging via root logger
     logger.propagate = False
+
     return logger
 
 
