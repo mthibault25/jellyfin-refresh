@@ -59,9 +59,10 @@ docker-compose.yml
 docker-compose.override.yml
 
 # ===============================
-# Local-only config
+# Local-only config and data
 # ===============================
 .env.local
+setup-dev-data.ps1
 
 # ===============================
 # Media & host mounts (CRITICAL)

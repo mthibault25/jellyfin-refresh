@@ -12,4 +12,4 @@
       - /mnt:/mnt
       - /media:/media
       # Mount config and data folders
-      - /data:/data
+      - /data:data
