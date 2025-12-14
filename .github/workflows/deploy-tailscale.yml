@@ -65,14 +65,6 @@ jobs:
 
           ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "
 
-          echo 'Refreshing repo...';
-          rm -rf /opt/docker/jellyfin-refresh;
-          git clone 'https://github.com/${GITHUB_REPOSITORY}.git' /opt/docker/jellyfin-refresh;
-
-          echo 'Fixing script permissions...';
-          chmod +x /opt/docker/jellyfin-refresh/scripts/*.sh;
-          chmod +x /opt/docker/jellyfin-refresh/scripts/*.py;
-
           cd /opt/docker/jellyfin-refresh;
 
           echo 'Pulling latest image...';
@@ -82,8 +74,6 @@ jobs:
           IMAGE=${IMAGE} docker compose up -d --remove-orphans;
 
           "
-
-
       - name: Bring down Tailscale
         if: always()
         run: sudo tailscale down || true

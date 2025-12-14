@@ -1,0 +1,78 @@
+# ===============================
+# Python cache / build artifacts
+# ===============================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# ===============================
+# Virtual environments
+# ===============================
+venv/
+.venv/
+.env/
+.env.*
+!.env.example
+
+# ===============================
+# Git
+# ===============================
+.git/
+.gitignore
+
+# ===============================
+# Logs & runtime files
+# ===============================
+*.log
+logs/
+nohup.out
+*.pid
+
+# ===============================
+# Editor / OS junk
+# ===============================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ===============================
+# Test & dev-only files
+# ===============================
+tests/
+pytest_cache/
+.coverage
+htmlcov/
+
+# ===============================
+# Docker / compose (build-time only)
+# ===============================
+docker-compose.yml
+docker-compose.override.yml
+
+# ===============================
+# Local-only config
+# ===============================
+.env.local
+
+# ===============================
+# Media & host mounts (CRITICAL)
+# ===============================
+mnt/
+media/
+srv/
+
+# ===============================
+# Script hygiene (keep scripts/, ignore junk)
+# ===============================
+scripts/**/__pycache__/
+scripts/**/*.log
+scripts/**/tests/

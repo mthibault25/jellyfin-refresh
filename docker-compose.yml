@@ -10,9 +10,6 @@
     volumes:
       # Mount media folders and symlinks
       - /mnt:/mnt
-      - /opt/riven-cache:/opt/riven-cache
-      - /media/shows:/media/shows
-      - /media/movies:/media/movies
-      - /opt/docker/logs:/opt/docker/logs
-      # Mount scripts
-      - /opt/docker/jellyfin-refresh/scripts:/app/scripts:ro
+      - /media:/media
+      # Mount config and data folders
+      - /data:/data

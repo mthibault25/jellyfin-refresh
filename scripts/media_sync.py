@@ -46,10 +46,10 @@ except Exception:
     # windows may not support tzset; that's fine
     pass
 
-CACHE_DIR = Path("/opt/riven-cache")
+CACHE_DIR = Path("/data/cache")
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-LOG_DIR = Path("/opt/docker/logs")
+LOG_DIR = Path("/data/logs")
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 LOG_TV_4k= "tv-4k.log"
 LOG_TV_1080= "tv-1080.log"
