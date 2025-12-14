@@ -470,7 +470,7 @@ def sync_movies_1080(full=False, movie_filter=None):
             wipe_dest=False,  # 👈 NEVER wipe here
         )
     finally:
-                SYNC_LOCK.release()
+        SYNC_LOCK.release()
 
 
 
@@ -491,7 +491,7 @@ def sync_tv_4k(full: bool = False, show_filter: Optional[str] = None, episode_fi
             filter_episode=episode_filter,
         )
     finally:
-                SYNC_LOCK.release()
+        SYNC_LOCK.release()
 
 
 def sync_tv_1080(full: bool = False, show_filter: Optional[str] = None, episode_filter: Optional[str] = None) -> bool:
@@ -511,7 +511,7 @@ def sync_tv_1080(full: bool = False, show_filter: Optional[str] = None, episode_
             filter_episode=episode_filter,
         )
     finally:
-                SYNC_LOCK.release()
+        SYNC_LOCK.release()
 
 
 def sync_movie(movie_name: str) -> None:

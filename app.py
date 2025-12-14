@@ -32,10 +32,22 @@ else:
     MEDIA_SHOWS = "/media/shows"
     MEDIA_MOVIES = "/media/movies"
 
-threading.Thread(
-    target=auto_runner.loop,
-    daemon=True
-).start()
+runner_started = False
+
+@app.before_first_request
+def start_auto_runner():
+    global runner_started
+    if runner_started:
+        return
+
+    runner_started = True
+    t = threading.Thread(
+        target=auto_runner.loop,
+        name="auto-runner",
+        daemon=True
+    )
+    t.start()
+
 
 ###############################################################################
 # Helpers
