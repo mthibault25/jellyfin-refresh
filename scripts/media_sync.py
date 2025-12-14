@@ -36,6 +36,7 @@ import re
 import argparse
 from typing import List, Tuple, Optional, Callable
 import shutil
+import threading
 
 # -----------------------------------------------------------
 # ENV / DEFAULT PATHS (confirmed)
@@ -46,6 +47,8 @@ try:
 except Exception:
     # windows may not support tzset; that's fine
     pass
+
+SYNC_LOCK = threading.Lock()
 
 CACHE_DIR = Path("/opt/riven-cache")
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -430,60 +433,85 @@ def _sync_engine(
 # Public convenience wrappers
 # -----------------------------------------------------------
 def sync_movies_4k(full=False, movie_filter=None, wipe_dest=False):
-    return _sync_engine(
-        src=SRC_MOVIES_4K,
-        dest_root=DEST_MOVIES,
-        cache_last_file=CACHE_DIR / "movies-4k.last",
-        default_res="2160p",
-        log_path=LOG_DIR / LOG_MOVIE_4k,
-        is_tv=False,
-        full=full,
-        filter_movie=movie_filter,
-        wipe_dest=wipe_dest,
-    )
+        if not SYNC_LOCK.acquire(blocking=False):
+            yield "Another sync is already running; skipping\n"
+            return
+
+        try:
+            return _sync_engine(
+                src=SRC_MOVIES_4K,
+                dest_root=DEST_MOVIES,
+                cache_last_file=CACHE_DIR / "movies-4k.last",
+                default_res="2160p",
+                log_path=LOG_DIR / LOG_MOVIE_4k,
+                is_tv=False,
+                full=full,
+                filter_movie=movie_filter,
+                wipe_dest=wipe_dest,
+            )
+        finally:
+            SYNC_LOCK.release()
 
 
 def sync_movies_1080(full=False, movie_filter=None):
-    return _sync_engine(
-        src=SRC_MOVIES_1080,
-        dest_root=DEST_MOVIES,
-        cache_last_file=CACHE_DIR / "movies-1080.last",
-        default_res="1080p",
-        log_path=LOG_DIR / LOG_MOVIE_1080,
-        is_tv=False,
-        full=full,
-        filter_movie=movie_filter,
-        wipe_dest=False,  # 👈 NEVER wipe here
-    )
+    if not SYNC_LOCK.acquire(blocking=False):
+            yield "Another sync is already running; skipping\n"
+            return
+    try:
+        return _sync_engine(
+            src=SRC_MOVIES_1080,
+            dest_root=DEST_MOVIES,
+            cache_last_file=CACHE_DIR / "movies-1080.last",
+            default_res="1080p",
+            log_path=LOG_DIR / LOG_MOVIE_1080,
+            is_tv=False,
+            full=full,
+            filter_movie=movie_filter,
+            wipe_dest=False,  # 👈 NEVER wipe here
+        )
+    finally:
+                SYNC_LOCK.release()
 
 
 
 def sync_tv_4k(full: bool = False, show_filter: Optional[str] = None, episode_filter: Optional[str] = None) -> bool:
-    return _sync_engine(
-        src=SRC_TV_4K,
-        dest_root=DEST_TV,
-        cache_last_file=CACHE_DIR / "tv-4k.last",
-        default_res="2160p",
-        log_path=LOG_DIR / LOG_TV_4k,
-        is_tv=True,
-        full=full,
-        filter_show=show_filter,
-        filter_episode=episode_filter,
-    )
+    if not SYNC_LOCK.acquire(blocking=False):
+            yield "Another sync is already running; skipping\n"
+            return
+    try:
+        return _sync_engine(
+            src=SRC_TV_4K,
+            dest_root=DEST_TV,
+            cache_last_file=CACHE_DIR / "tv-4k.last",
+            default_res="2160p",
+            log_path=LOG_DIR / LOG_TV_4k,
+            is_tv=True,
+            full=full,
+            filter_show=show_filter,
+            filter_episode=episode_filter,
+        )
+    finally:
+                SYNC_LOCK.release()
 
 
 def sync_tv_1080(full: bool = False, show_filter: Optional[str] = None, episode_filter: Optional[str] = None) -> bool:
-    return _sync_engine(
-        src=SRC_TV_1080,
-        dest_root=DEST_TV,
-        cache_last_file=CACHE_DIR / "tv-1080.last",
-        default_res="1080p",
-        log_path=LOG_DIR / LOG_TV_1080,
-        is_tv=True,
-        full=full,
-        filter_show=show_filter,
-        filter_episode=episode_filter,
-    )
+    if not SYNC_LOCK.acquire(blocking=False):
+            yield "Another sync is already running; skipping\n"
+            return
+    try:
+        return _sync_engine(
+            src=SRC_TV_1080,
+            dest_root=DEST_TV,
+            cache_last_file=CACHE_DIR / "tv-1080.last",
+            default_res="1080p",
+            log_path=LOG_DIR / LOG_TV_1080,
+            is_tv=True,
+            full=full,
+            filter_show=show_filter,
+            filter_episode=episode_filter,
+        )
+    finally:
+                SYNC_LOCK.release()
 
 
 def sync_movie(movie_name: str) -> None:
