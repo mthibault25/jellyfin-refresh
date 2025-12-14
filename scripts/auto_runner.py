@@ -1,6 +1,5 @@
 import time
 import signal
-import threading
 from scripts import media_sync
 
 RUNNING = True
@@ -13,19 +12,24 @@ def shutdown(signum, frame):
 signal.signal(signal.SIGTERM, shutdown)
 signal.signal(signal.SIGINT, shutdown)
 
+def drain(gen):
+    """Fully consume a sync generator"""
+    for _ in gen:
+        pass
+
 def loop():
     while RUNNING:
         try:
-            # TV first
-            media_sync.sync_tv_4k()
-            media_sync.sync_tv_1080()
+            # TV
+            drain(media_sync.sync_tv_4k())
+            drain(media_sync.sync_tv_1080())
 
             # Movies
-            media_sync.sync_movies_4k()
-            media_sync.sync_movies_1080()
+            drain(media_sync.sync_movies_4k())
+            drain(media_sync.sync_movies_1080())
 
         except Exception:
-            # media_sync already logs exceptions
+            # media_sync already logs
             pass
 
         time.sleep(SLEEP_SECONDS)
