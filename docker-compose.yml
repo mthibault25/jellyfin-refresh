@@ -13,3 +13,4 @@
       - /media:/media
       # Mount config and data folders
       - /opt/docker/jellyfin-refresh/data:/data
+      - /opt/docker/jellyfin-refresh/config:/app/config

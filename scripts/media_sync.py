@@ -17,13 +17,8 @@ Public functions you can import & call:
 Also supports CLI usage when run directly:
   ./media_sync.py --mode movies --res 4k --full
   ./media_sync.py --mode tv --res 1080 --show "My Show" --episode S01E01
-
-Logging:
-  /opt/docker/logs/tv_4k.log
-  /opt/docker/logs/tv_1080.log
-  /opt/docker/logs/movie_4k.log
-  /opt/docker/logs/movie_1080.log
 """
+
 from __future__ import annotations
 import os
 import time
@@ -39,31 +34,21 @@ import shutil
 # -----------------------------------------------------------
 # ENV / DEFAULT PATHS (confirmed)
 # -----------------------------------------------------------
-os.environ.setdefault("TZ", "America/Toronto")
-try:
-    time.tzset()
-except Exception:
-    # windows may not support tzset; that's fine
-    pass
-
-CACHE_DIR = Path("/data/cache")
-CACHE_DIR.mkdir(parents=True, exist_ok=True)
-
-LOG_DIR = Path("/data/logs")
-LOG_DIR.mkdir(parents=True, exist_ok=True)
-LOG_TV_4k= "tv-4k.log"
-LOG_TV_1080= "tv-1080.log"
-LOG_MOVIE_4k= "movie-4k.log"
-LOG_MOVIE_1080= "movie-1080.log"
-
-# Source paths (per your confirmation)
-SRC_MOVIES_4K = Path("/mnt/debrid/riven_symlinks/movies")
-SRC_MOVIES_1080 = Path("/mnt/debrid_1080/riven_symlinks/movies")
-DEST_MOVIES = Path("/media/movies")
-
-SRC_TV_4K = Path("/mnt/debrid/riven_symlinks/shows")
-SRC_TV_1080 = Path("/mnt/debrid_1080/riven_symlinks/shows")
-DEST_TV = Path("/media/shows")
+from config import (
+    LOG_DIR,
+    LOG_TV_4K,
+    LOG_TV_1080,
+    LOG_MOVIE_4K,
+    LOG_MOVIE_1080,
+    SRC_MOVIES_4K,
+    SRC_MOVIES_1080,
+    SRC_TV_4K,
+    SRC_TV_1080,
+    DEST_MOVIES,
+    DEST_TV,
+    CACHE_FILES,
+    DEFAULT_RES,
+)
 
 
 # -----------------------------------------------------------
@@ -106,9 +91,9 @@ def _make_logger(name: str, log_path: Path) -> logging.Logger:
 def _detect_filename_res(name: str) -> Optional[str]:
     n = name.lower()
     if "2160" in n or "4k" in n or "uhd" in n:
-        return "2160p"
+        return DEFAULT_RES["4k"]
     if "1080" in n:
-        return "1080p"
+        return DEFAULT_RES["1080"]
     return None
 
 
@@ -116,18 +101,18 @@ def _detect_keyword_res(name: str) -> Optional[str]:
     n = name.lower()
     # dv vs dovi matching; hdr; avc
     if "dv" in n or "dovi" in n or "hdr" in n:
-        return "2160p"
+        return DEFAULT_RES["4k"]
     if "avc" in n:
-        return "1080p"
+        return DEFAULT_RES["1080"]
     return None
 
 
 def _detect_folder_res(name: str) -> Optional[str]:
     n = name.lower()
     if "2160" in n or "4k" in n:
-        return "2160p"
+        return DEFAULT_RES["4k"]
     if "1080" in n:
-        return "1080p"
+        return DEFAULT_RES["1080"]
     return None
 
 
@@ -147,9 +132,9 @@ def _probe_resolution(path: str) -> Optional[str]:
             return None
         w = int(out)
         if w >= 3800:
-            return "2160p"
+            return DEFAULT_RES["4k"]
         if w >= 1900:
-            return "1080p"
+            return DEFAULT_RES["1080"]
         return "720p"
     except Exception:
         return None
@@ -432,9 +417,9 @@ def sync_movies_4k(full=False, movie_filter=None, wipe_dest=False):
         return _sync_engine(
                 src=SRC_MOVIES_4K,
                 dest_root=DEST_MOVIES,
-                cache_last_file=CACHE_DIR / "movies-4k.last",
-                default_res="2160p",
-                log_path=LOG_DIR / LOG_MOVIE_4k,
+                cache_last_file=CACHE_FILES["movies_4k"],
+                default_res=DEFAULT_RES["4k"],
+                log_path=LOG_DIR / LOG_MOVIE_4K,
                 is_tv=False,
                 full=full,
                 filter_movie=movie_filter,
@@ -446,8 +431,8 @@ def sync_movies_1080(full=False, movie_filter=None):
     return _sync_engine(
             src=SRC_MOVIES_1080,
             dest_root=DEST_MOVIES,
-            cache_last_file=CACHE_DIR / "movies-1080.last",
-            default_res="1080p",
+            cache_last_file=CACHE_FILES["movies_1080"],
+            default_res=DEFAULT_RES["1080"],
             log_path=LOG_DIR / LOG_MOVIE_1080,
             is_tv=False,
             full=full,
@@ -461,9 +446,9 @@ def sync_tv_4k(full: bool = False, show_filter: Optional[str] = None, episode_fi
     return _sync_engine(
             src=SRC_TV_4K,
             dest_root=DEST_TV,
-            cache_last_file=CACHE_DIR / "tv-4k.last",
-            default_res="2160p",
-            log_path=LOG_DIR / LOG_TV_4k,
+            cache_last_file=CACHE_FILES["tv_4k"],
+            default_res=DEFAULT_RES["4k"],
+            log_path=LOG_DIR / LOG_TV_4K,
             is_tv=True,
             full=full,
             filter_show=show_filter,
@@ -476,8 +461,8 @@ def sync_tv_1080(full: bool = False, show_filter: Optional[str] = None, episode_
     return _sync_engine(
             src=SRC_TV_1080,
             dest_root=DEST_TV,
-            cache_last_file=CACHE_DIR / "tv-1080.last",
-            default_res="1080p",
+            cache_last_file=CACHE_FILES["tv_1080"],
+            default_res=DEFAULT_RES["1080"],
             log_path=LOG_DIR / LOG_TV_1080,
             is_tv=True,
             full=full,
@@ -552,9 +537,9 @@ def _cli():
                 _sync_engine(
                     src=Path(args.src),
                     dest_root=DEST_MOVIES,
-                    cache_last_file=CACHE_DIR / "movies-4k.last",
-                    default_res="2160p",
-                    log_path=LOG_DIR / LOG_MOVIE_4k,
+                    cache_last_file=CACHE_FILES["movies_4k"],
+                    default_res=DEFAULT_RES["4k"],
+                    log_path=LOG_DIR / LOG_MOVIE_4K,
                     is_tv=False,
                     full=args.full,
                     filter_movie=args.movie,
@@ -566,8 +551,8 @@ def _cli():
                 _sync_engine(
                     src=Path(args.src),
                     dest_root=DEST_MOVIES,
-                    cache_last_file=CACHE_DIR / "movies-1080.last",
-                    default_res="1080p",
+                    cache_last_file=CACHE_FILES["movies_1080"],
+                    default_res=DEFAULT_RES["1080"],
                     log_path=LOG_DIR / LOG_MOVIE_1080,
                     is_tv=False,
                     full=args.full,
@@ -582,9 +567,9 @@ def _cli():
                 _sync_engine(
                     src=Path(args.src),
                     dest_root=DEST_TV,
-                    cache_last_file=CACHE_DIR / "tv-4k.last",
-                    default_res="2160p",
-                    log_path=LOG_DIR / LOG_TV_4k,
+                    cache_last_file=CACHE_FILES["tv_4k"],
+                    default_res=DEFAULT_RES["4k"],
+                    log_path=LOG_DIR / LOG_TV_4K,
                     is_tv=True,
                     full=args.full,
                     filter_show=args.show,
@@ -597,8 +582,8 @@ def _cli():
                 _sync_engine(
                     src=Path(args.src),
                     dest_root=DEST_TV,
-                    cache_last_file=CACHE_DIR / "tv-1080.last",
-                    default_res="1080p",
+                    cache_last_file=CACHE_FILES["tv_1080"],
+                    default_res=DEFAULT_RES["1080"],
                     log_path=LOG_DIR / LOG_TV_1080,
                     is_tv=True,
                     full=args.full,
