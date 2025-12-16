@@ -3,6 +3,13 @@
 {% block content %}
   <h2>{{ movie }}</h2>
 
+  <div class="show-actions">
+    <form onsubmit="event.preventDefault(); streamToPre('/run/refresh_movie', {'movie': '{{ movie }}'}, 'output')">
+      <button type="submit">Refresh this movie</button>
+    </form>
+    <a href="{{ url_for('index') }}">Back</a>
+  </div>
+
   <ul>
     {% for file in files %}
       {% set lower = file.lower() %}
