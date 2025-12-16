@@ -4,9 +4,6 @@
 import os
 from flask import Flask, render_template, request, Response, stream_with_context, send_from_directory, url_for, redirect
 
-from dotenv import load_dotenv
-load_dotenv('.env.local', override=True)
-
 # Import unified sync engine
 from scripts import media_sync
 
@@ -16,21 +13,12 @@ import threading
 
 from pathlib import Path
 
+from config import (
+    DEST_MOVIES,
+    DEST_TV,
+)
+
 app = Flask(__name__, static_folder='static', template_folder='templates')
-
-# CONFIG - edit if your paths differ
-DEV_MODE = os.getenv('DEV_MODE', '').lower() in ('true', '1', 'yes')
-
-if DEV_MODE:
-    BASENAME_4K = os.path.expandvars(os.getenv('DEV_BASENAME_4K', '%LOCALAPPDATA%\\jellyfin-refresh-test\\debrid'))
-    BASENAME_1080 = os.path.expandvars(os.getenv('DEV_BASENAME_1080', '%LOCALAPPDATA%\\jellyfin-refresh-test\\debrid_1080'))
-    MEDIA_SHOWS = os.path.expandvars(os.getenv('DEV_MEDIA_SHOWS', '%LOCALAPPDATA%\\jellyfin-refresh-test\\media\\shows'))
-    MEDIA_MOVIES = os.path.expandvars(os.getenv('DEV_MEDIA_MOVIES', '%LOCALAPPDATA%\\jellyfin-refresh-test\\media\\movies'))
-else:
-    BASENAME_4K = "/mnt/debrid/riven_symlinks"
-    BASENAME_1080 = "/mnt/debrid_1080/riven_symlinks"
-    MEDIA_SHOWS = "/media/shows"
-    MEDIA_MOVIES = "/media/movies"
 
 threading.Thread(
     target=auto_runner.loop,
@@ -48,14 +36,13 @@ def safe_listdir(path):
         return []
 
 def list_shows():
-    return safe_listdir(MEDIA_SHOWS)
+    return safe_listdir(DEST_TV)
 
 def list_movies():
-    return safe_listdir(MEDIA_MOVIES)
+    return safe_listdir(DEST_MOVIES)
 
 def list_movie(movie):
-    base = os.path.join(MEDIA_MOVIES, movie)
-    print(f"[DEBUG] Listing movie path: {base}")
+    base = os.path.join(DEST_MOVIES, movie)
 
     movies = []
     try:
@@ -72,14 +59,14 @@ def list_movie(movie):
 
 
 def list_seasons(show):
-    base = os.path.join(MEDIA_SHOWS, show)
+    base = os.path.join(DEST_TV, show)
     try:
         return sorted([d for d in os.listdir(base) if os.path.isdir(os.path.join(base, d))])
     except FileNotFoundError:
         return []
 
 def list_episodes(show, season):
-    base = os.path.join(MEDIA_SHOWS, show, season)
+    base = os.path.join(DEST_TV, show, season)
     episodes = []
     try:
         for f in sorted(os.listdir(base)):
@@ -92,7 +79,7 @@ def list_episodes(show, season):
     return episodes
 
 def list_movie_files(movie):
-    movie_dir = MEDIA_MOVIES / movie
+    movie_dir = DEST_MOVIES / movie
     if not movie_dir.exists():
         return []
     return sorted(p.name for p in movie_dir.iterdir() if p.is_symlink())
@@ -231,19 +218,6 @@ def static_files(filename):
 @app.route('/ui')
 def ui():
     return redirect(url_for('index'))
-
-###############################################################################
-# Media watcher endpoints
-###############################################################################
-# @app.route("/watcher/start", methods=["POST"])
-# def start_watcher_route():
-#     media_watcher.start_watcher()
-#     return "Watcher started\n"
-
-# @app.route("/watcher/stop", methods=["POST"])
-# def stop_watcher_route():
-#     media_watcher.stop()
-#     return "Watcher stopping\n"
 
 ###############################################################################
 
