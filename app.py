@@ -22,7 +22,7 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 DEV_MODE = os.getenv('DEV_MODE', '').lower() in ('true', '1', 'yes')
 
 if DEV_MODE:
-    BASENAME_4K = os.path.expandvars(os.getenv('DEV_BASENAME_4K', '%LOCALAPPDATA%\\jellyfin-refresh-test\\debrid_4k'))
+    BASENAME_4K = os.path.expandvars(os.getenv('DEV_BASENAME_4K', '%LOCALAPPDATA%\\jellyfin-refresh-test\\debrid'))
     BASENAME_1080 = os.path.expandvars(os.getenv('DEV_BASENAME_1080', '%LOCALAPPDATA%\\jellyfin-refresh-test\\debrid_1080'))
     MEDIA_SHOWS = os.path.expandvars(os.getenv('DEV_MEDIA_SHOWS', '%LOCALAPPDATA%\\jellyfin-refresh-test\\media\\shows'))
     MEDIA_MOVIES = os.path.expandvars(os.getenv('DEV_MEDIA_MOVIES', '%LOCALAPPDATA%\\jellyfin-refresh-test\\media\\movies'))
@@ -54,21 +54,22 @@ def list_movies():
     return safe_listdir(MEDIA_MOVIES)
 
 def list_movie(movie):
-    # movie_dir = Path(MEDIA_MOVIES) / movie
-    # if not movie_dir.exists():
-    #     return []
-    # return sorted(p.name for p in movie_dir.iterdir() if p.is_symlink())
     base = os.path.join(MEDIA_MOVIES, movie)
+    print(f"[DEBUG] Listing movie path: {base}")
+
     movies = []
     try:
         for f in sorted(os.listdir(base)):
             p = os.path.join(base, f)
+
             if os.path.isfile(p) or os.path.islink(p):
                 if f.lower().endswith((".mkv", ".mp4")):
                     movies.append(f)
     except FileNotFoundError:
-        pass
+        return []
+
     return movies
+
 
 def list_seasons(show):
     base = os.path.join(MEDIA_SHOWS, show)
@@ -124,13 +125,22 @@ def show_page(show):
                            seasons=list_seasons(show),
                            list_episodes=list_episodes)
 
+from urllib.parse import unquote
+
 @app.route('/movie/<path:movie>')
 def movie_page(movie):
+    from urllib.parse import unquote
+    movie = unquote(movie)
+
+    files = list_movie(movie)
+
     return render_template(
         'movie.html',
         movie=movie,
-        files=list_movie(movie)
+        files=files
     )
+
+
 
 ###############################################################################
 # Run refresh endpoints (NO subprocess — mounted directly to Python functions)
