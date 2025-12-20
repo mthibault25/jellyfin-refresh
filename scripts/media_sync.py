@@ -323,11 +323,16 @@ def _sync_engine(
             basename = link_path.name
 
             # resolve target
-            try:
-                target = link_path.resolve(strict=True)
-            except FileNotFoundError:
-                yield from out(f"Broken symlink: {link}")
+            if not link_path.is_symlink():
+                yield from out(f"Not a symlink: {link}")
                 continue
+
+            try:
+                target = Path(os.readlink(link_path))
+            except OSError as e:
+                yield from out(f"Unresolvable symlink target (expected for RD): {link}")
+                continue
+
 
             # tv seasons
             if is_tv:

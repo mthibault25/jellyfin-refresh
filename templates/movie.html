@@ -3,7 +3,14 @@
 {% block content %}
   <h2>{{ movie }}</h2>
 
-  <ul>
+  <div class="movie-content">
+    <div class="movie-actions">
+      <form onsubmit="event.preventDefault(); streamToPre('/run/refresh_movie', {'movie': '{{ movie }}'}, 'output')">
+        <button type="submit">Refresh this movie</button>
+      </form>
+    </div>
+
+    <ul>
     {% for file in files %}
       {% set lower = file.lower() %}
       {% if '2160' in lower or '4k' in lower or 'uhd' in lower %}
@@ -19,6 +26,7 @@
       <li>No movie files found</li>
     {% endfor %}
   </ul>
+  </div>
 
   <pre id="output" class="output"></pre>
 
