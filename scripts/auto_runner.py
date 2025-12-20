@@ -2,8 +2,13 @@ import time
 import signal
 from scripts import media_sync
 
-RUNNING = True
-SLEEP_SECONDS = 30
+from config import (
+    AUTO_RUNNING,
+    SLEEP_SECONDS,
+)
+
+RUNNING = AUTO_RUNNING
+SLEEP_SECONDS = SLEEP_SECONDS
 
 def shutdown(signum, frame):
     global RUNNING
