@@ -26,12 +26,11 @@ def loop():
     while RUNNING:
         try:
             # TV
-            drain(media_sync.sync_tv_4k())
-            drain(media_sync.sync_tv_1080())
+            # drain(media_sync.sync_tv())
 
             # Movies
-            drain(media_sync.sync_movies_4k())
-            drain(media_sync.sync_movies_1080())
+            # drain(media_sync.sync_movies())
+            drain(media_sync.sync_all())
 
         except Exception:
             # media_sync already logs

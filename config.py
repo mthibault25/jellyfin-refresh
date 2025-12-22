@@ -31,7 +31,6 @@ class MediaSource:
     src: Path
     default_res: str
     cache_file: Path
-    log_path: Path
 
 # -----------------------------------------------------------
 # Base directories
@@ -52,6 +51,7 @@ LOG_TV_4K     = "tv-4k.log"
 LOG_TV_1080   = "tv-1080.log"
 LOG_MOVIE_4K  = "movie-4k.log"
 LOG_MOVIE_1080= "movie-1080.log"
+LOG_FILE  = "media-sync.log"
 
 
 # -----------------------------------------------------------
@@ -115,14 +115,12 @@ MOVIE_SOURCES = [
         src=Path(SRC_MOVIES_4K),
         default_res=DEFAULT_RES["4k"],
         cache_file=CACHE_FILES["movies_4k"],
-        log_path=LOG_DIR / LOG_MOVIE_4K,
     ),
     MediaSource(
         name="movies_1080",
         src=Path(SRC_MOVIES_1080),
         default_res=DEFAULT_RES["1080"],
         cache_file=CACHE_FILES["movies_1080"],
-        log_path=LOG_DIR / LOG_MOVIE_1080,
     ),
 ]
 
@@ -132,14 +130,12 @@ TV_SOURCES = [
         src=Path(SRC_TV_4K),
         default_res=DEFAULT_RES["4k"],
         cache_file=CACHE_FILES["tv_4k"],
-        log_path=LOG_DIR / LOG_TV_4K,
     ),
     MediaSource(
         name="tv_1080",
         src=Path(SRC_TV_1080),
         default_res=DEFAULT_RES["1080"],
         cache_file=CACHE_FILES["tv_1080"],
-        log_path=LOG_DIR / LOG_TV_1080,
     ),
 ]
 
