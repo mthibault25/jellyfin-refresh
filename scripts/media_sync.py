@@ -437,7 +437,7 @@ def _sync_engine(
         try:
             cache_last_file.write_text(str(now_ts))
             # yield from out(f"Timestamp updated")
-            scanner.trigger_scan()
+            scanner.trigger_scan(logger=logger)
         except Exception as e:
             yield from out(f"Failed to update timestamp file {cache_last_file}: {e}")
 
