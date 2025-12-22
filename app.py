@@ -140,13 +140,7 @@ def refresh_show():
         return "Missing show", 400
 
     def gen():
-        yield f"=== Refreshing TV show: {show} (4K) ==="
-        for line in media_sync.sync_tv_4k(show_filter=show, wipe_dest=True):
-            yield line
-
-        yield ""
-        yield f"=== Refreshing TV show: {show} (1080p) ==="
-        for line in media_sync.sync_tv_1080(show_filter=show):
+        for line in media_sync.sync_show(show_name=show):
             yield line
 
     return stream_python(gen)
@@ -158,13 +152,7 @@ def refresh_movie():
         return "Missing movie", 400
 
     def gen():
-        yield f"=== Refreshing movie: {movie} (4K) ==="
-        for line in media_sync.sync_movies_4k(movie_filter=movie, wipe_dest=True):
-            yield line
-
-        yield ""
-        yield f"=== Refreshing movie: {movie} (1080p) ==="
-        for line in media_sync.sync_movies_1080(movie_filter=movie):
+        for line in media_sync.sync_movie(movie_name=movie):
             yield line
 
     return stream_python(gen)
@@ -173,7 +161,6 @@ def refresh_movie():
 @app.route('/run/refresh_all', methods=['POST'])
 def refresh_all():
     def gen():
-        yield "=== Full refresh: ALL media ==="
         for line in media_sync.sync_all(full=True):
             yield line
 
@@ -182,13 +169,7 @@ def refresh_all():
 @app.route('/run/refresh_movies_inc', methods=['POST'])
 def refresh_movies_inc():
     def gen():
-        yield "=== Incremental Movies 4K ==="
-        for line in media_sync.sync_movies_4k():
-            yield line
-
-        yield ""
-        yield "=== Incremental Movies 1080p ==="
-        for line in media_sync.sync_movies_1080():
+        for line in media_sync.sync_movies():
             yield line
 
     return stream_python(gen)
@@ -196,13 +177,7 @@ def refresh_movies_inc():
 @app.route('/run/refresh_shows_inc', methods=['POST'])
 def refresh_shows_inc():
     def gen():
-        yield "=== Incremental TV 4K ==="
-        for line in media_sync.sync_tv_4k():
-            yield line
-
-        yield ""
-        yield "=== Incremental TV 1080p ==="
-        for line in media_sync.sync_tv_1080():
+        for line in media_sync.sync_tv():
             yield line
 
     return stream_python(gen)

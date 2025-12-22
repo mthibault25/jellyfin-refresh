@@ -3,6 +3,8 @@ from pathlib import Path
 import os
 import time
 
+from dataclasses import dataclass
+
 from dotenv import load_dotenv
 load_dotenv('.env.local', override=True)
 
@@ -20,6 +22,16 @@ try:
 except Exception:
     pass
 
+# -----------------------------------------------------------
+# MediaSource dataclass
+# -----------------------------------------------------------
+@dataclass
+class MediaSource:
+    name: str
+    src: Path
+    default_res: str
+    cache_file: Path
+    log_path: Path
 
 # -----------------------------------------------------------
 # Base directories
@@ -93,3 +105,47 @@ DEFAULT_RES = {
 # -----------------------------------------------------------
 AUTO_RUNNING=True
 SLEEP_SECONDS=30
+
+# -----------------------------------------------------------
+# Media sources configuration
+# -----------------------------------------------------------
+MOVIE_SOURCES = [
+    MediaSource(
+        name="movies_4k",
+        src=Path(SRC_MOVIES_4K),
+        default_res=DEFAULT_RES["4k"],
+        cache_file=CACHE_FILES["movies_4k"],
+        log_path=LOG_DIR / LOG_MOVIE_4K,
+    ),
+    MediaSource(
+        name="movies_1080",
+        src=Path(SRC_MOVIES_1080),
+        default_res=DEFAULT_RES["1080"],
+        cache_file=CACHE_FILES["movies_1080"],
+        log_path=LOG_DIR / LOG_MOVIE_1080,
+    ),
+]
+
+TV_SOURCES = [
+    MediaSource(
+        name="tv_4k",
+        src=Path(SRC_TV_4K),
+        default_res=DEFAULT_RES["4k"],
+        cache_file=CACHE_FILES["tv_4k"],
+        log_path=LOG_DIR / LOG_TV_4K,
+    ),
+    MediaSource(
+        name="tv_1080",
+        src=Path(SRC_TV_1080),
+        default_res=DEFAULT_RES["1080"],
+        cache_file=CACHE_FILES["tv_1080"],
+        log_path=LOG_DIR / LOG_TV_1080,
+    ),
+]
+
+# -----------------------------------------------------------
+# Jellyfin configuration
+# -----------------------------------------------------------
+JELLYFIN_URL = "http://192.168.2.232:8096"
+API_KEY = "f6523c0ba9604ecda03bf9481cec46e9"
+

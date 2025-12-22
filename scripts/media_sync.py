@@ -40,37 +40,35 @@ from config import (
     LOG_TV_1080,
     LOG_MOVIE_4K,
     LOG_MOVIE_1080,
-    SRC_MOVIES_4K,
-    SRC_MOVIES_1080,
-    SRC_TV_4K,
-    SRC_TV_1080,
     DEST_MOVIES,
     DEST_TV,
     CACHE_FILES,
     DEFAULT_RES,
+    MediaSource,
+    MOVIE_SOURCES,
+    TV_SOURCES,
 )
 
+from scripts import jellyfin_scan as scanner
 
 # -----------------------------------------------------------
 # Logging helpers
 # -----------------------------------------------------------
 def _make_logger(name: str, log_path: Path) -> logging.Logger:
-    """
-    Create (or return) a logger that writes to log_path and stdout.
-    The format is kept minimal to match your existing scripts.
-    """
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
 
-    # 🔑 CRITICAL FIX: prevent handler duplication
-    if logger.handlers:
-        return logger
+    # 🔥 ALWAYS reset handlers so format changes take effect
+    logger.handlers.clear()
 
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    formatter = logging.Formatter("%(message)s")
+    formatter = logging.Formatter(
+        "[%(asctime)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
 
-    file_handler = logging.FileHandler(log_path, mode="a")
+    file_handler = logging.FileHandler(log_path, mode="a", encoding="utf-8")
     file_handler.setFormatter(formatter)
 
     stream_handler = logging.StreamHandler()
@@ -79,10 +77,9 @@ def _make_logger(name: str, log_path: Path) -> logging.Logger:
     logger.addHandler(file_handler)
     logger.addHandler(stream_handler)
 
-    # Prevent double logging via root logger
     logger.propagate = False
-
     return logger
+
 
 
 # -----------------------------------------------------------
@@ -203,17 +200,63 @@ def atomic_symlink(target: Path, dest: Path) -> None:
             except Exception:
                 pass
 
-def wipe_dest_folder(path: Path, logger):
+def wipe_dest_folder(path: Path):
     if not path.exists():
         return
-    logger.info(f"Removing destination folder: {path}")
     try:
         shutil.rmtree(path)
     except Exception as e:
-        logger.info(f"Failed to remove {path}: {e}")
+        raise RuntimeError(f"Failed to wipe destination folder {path}: {e}")
 
 def already_tagged(name: str) -> bool:
     return bool(re.search(r"\s-\s(2160p|1080p|720p)", name))
+
+# -----------------------------------------------------------
+# Core sync engine  (reusable)
+# -----------------------------------------------------------
+def sync_sources(
+    sources: list[MediaSource],
+    *,
+    dest_root: Path,
+    is_tv: bool,
+    full: bool = False,
+    movie_filter: str | None = None,
+    show_filter: str | None = None,
+    episode_filter: str | None = None,
+    wipe_dest: bool = False,
+):
+    dest_root = Path(dest_root)
+
+    # 🔥 WIPE ONCE PER RUN
+    if wipe_dest:
+        if is_tv and show_filter:
+            dest_path = dest_root / show_filter
+        elif not is_tv and movie_filter:
+            dest_path = dest_root / movie_filter
+        else:
+            dest_path = None
+
+        if dest_path and dest_path.exists():
+            wipe_dest_folder(dest_path)
+
+    # 🔁 PROCESS SOURCES
+    for source in sources:
+        if not source.src.exists():
+            continue
+
+        yield from _sync_engine(
+            src=source.src,
+            dest_root=dest_root,
+            cache_last_file=source.cache_file,
+            default_res=source.default_res,
+            log_path=source.log_path,
+            is_tv=is_tv,
+            full=full,
+            filter_movie=movie_filter,
+            filter_show=show_filter,
+            filter_episode=episode_filter,
+        )
+
 
 
 def _sync_engine(
@@ -228,8 +271,11 @@ def _sync_engine(
     filter_show: Optional[str] = None,
     filter_episode: Optional[str] = None,
     filter_movie: Optional[str] = None,
-    wipe_dest: bool = False,
 ):
+    src = Path(src)
+    dest_root = Path(dest_root)
+    cache_last_file = Path(cache_last_file)
+    log_path = Path(log_path)
 
     """
     Core sync routine. Yields log lines for UI streaming.
@@ -238,30 +284,17 @@ def _sync_engine(
     logger = _make_logger(log_path.stem, log_path)
 
     def out(msg: str):
+        ts = time.strftime("%Y-%m-%d %H:%M:%S")
         logger.info(msg)
-        yield msg + "\n"
+        yield f"[{ts}] {msg}\n"
 
     # header
-    now_human = time.strftime("%Y-%m-%d %H:%M:%S")
-    kind = "TV" if is_tv else "MOVIE"
+    # now_human = time.strftime("%Y-%m-%d %H:%M:%S")
+    # kind = "TV" if is_tv else "MOVIE"
 
-    yield from out("")
-    yield from out(f"================ {kind} SYNC: {now_human} ================")
-    yield from out("")
-
-    # destructive refresh for targeted runs
-    if wipe_dest:
-        if is_tv and filter_show:
-            dest_show = dest_root / filter_show
-            yield from out(f"Removing destination folder: {dest_show}")
-            wipe_dest_folder(dest_show, logger)
-
-        if not is_tv and filter_movie:
-            dest_movie = dest_root / filter_movie
-            yield from out(f"Removing destination folder: {dest_movie}")
-            wipe_dest_folder(dest_movie, logger)
-
-
+    # yield from out("")
+    # yield from out(f"================ {kind} SYNC: {now_human} ================")
+    # yield from out("")
 
     # ensure last file exists
     cache_last_file.parent.mkdir(parents=True, exist_ok=True)
@@ -280,18 +313,18 @@ def _sync_engine(
 
     now_ts = int(time.time())
 
-    yield from out(f"{kind} SYNC:")
-    yield from out(f" SRC          = {src}")
-    yield from out(f" PREV_TS      = {prev_ts}")
-    yield from out(f" FULL MODE    = {full}")
+    # yield from out(f"{kind} SYNC:")
+    # yield from out(f" SRC          = {src}")
+    # yield from out(f" PREV_TS      = {prev_ts}")
+    # yield from out(f" FULL MODE    = {full}")
 
-    if is_tv:
-        yield from out(f" FILTER_SHOW  = '{filter_show}'")
-        yield from out(f" FILTER_EP    = '{filter_episode}'")
-    else:
-        yield from out(f" FILTER_MOVIE = '{filter_movie}'")
+    # if is_tv:
+    #     yield from out(f" FILTER_SHOW  = '{filter_show}'")
+    #     yield from out(f" FILTER_EP    = '{filter_episode}'")
+    # else:
+    #     yield from out(f" FILTER_MOVIE = '{filter_movie}'")
 
-    yield from out("")
+    # yield from out("")
 
     processed_any = False
     symlinks = find_symlinks_sorted(src)
@@ -400,8 +433,8 @@ def _sync_engine(
     if update_last_file and processed_any:
         try:
             cache_last_file.write_text(str(now_ts))
-            human = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now_ts))
-            yield from out(f"Updated timestamp: {human} ({now_ts})")
+            yield from out(f"Timestamp updated")
+            scanner.trigger_scan()
         except Exception as e:
             yield from out(f"Failed to update timestamp file {cache_last_file}: {e}")
 
@@ -411,113 +444,50 @@ def _sync_engine(
     else:
         yield from out("Skipped timestamp update (targeted or full refresh).")
 
-    yield from out(f"{kind} SYNC COMPLETE\n")
+    # yield from out(f"{kind} SYNC COMPLETE\n")
 
 
 
 # -----------------------------------------------------------
 # Public convenience wrappers
 # -----------------------------------------------------------
-def sync_movies_4k(full=False, movie_filter=None, wipe_dest=False):
-        return _sync_engine(
-                src=SRC_MOVIES_4K,
-                dest_root=DEST_MOVIES,
-                cache_last_file=CACHE_FILES["movies_4k"],
-                default_res=DEFAULT_RES["4k"],
-                log_path=LOG_DIR / LOG_MOVIE_4K,
-                is_tv=False,
-                full=full,
-                filter_movie=movie_filter,
-                wipe_dest=wipe_dest,
-        )
-
-
-def sync_movies_1080(full=False, movie_filter=None):
-    return _sync_engine(
-            src=SRC_MOVIES_1080,
-            dest_root=DEST_MOVIES,
-            cache_last_file=CACHE_FILES["movies_1080"],
-            default_res=DEFAULT_RES["1080"],
-            log_path=LOG_DIR / LOG_MOVIE_1080,
-            is_tv=False,
-            full=full,
-            filter_movie=movie_filter,
-            wipe_dest=False,
-        )
-
-
-
-def sync_tv_4k(full: bool = False, show_filter: Optional[str] = None, episode_filter: Optional[str] = None, wipe_dest=False) -> bool:
-    return _sync_engine(
-            src=SRC_TV_4K,
-            dest_root=DEST_TV,
-            cache_last_file=CACHE_FILES["tv_4k"],
-            default_res=DEFAULT_RES["4k"],
-            log_path=LOG_DIR / LOG_TV_4K,
-            is_tv=True,
-            full=full,
-            filter_show=show_filter,
-            filter_episode=episode_filter,
-            wipe_dest=wipe_dest,
+def sync_movies(full=False, movie_filter=None, wipe_dest=False):
+    return sync_sources(
+        MOVIE_SOURCES,
+        dest_root=DEST_MOVIES,
+        is_tv=False,
+        full=full,
+        movie_filter=movie_filter,
+        wipe_dest=wipe_dest,
     )
 
 
-def sync_tv_1080(full: bool = False, show_filter: Optional[str] = None, episode_filter: Optional[str] = None) -> bool:
-    return _sync_engine(
-            src=SRC_TV_1080,
-            dest_root=DEST_TV,
-            cache_last_file=CACHE_FILES["tv_1080"],
-            default_res=DEFAULT_RES["1080"],
-            log_path=LOG_DIR / LOG_TV_1080,
-            is_tv=True,
-            full=full,
-            filter_show=show_filter,
-            filter_episode=episode_filter,
-            wipe_dest=False,
-        )
+def sync_tv(full=False, show_filter=None, episode_filter=None, wipe_dest=False):
+    return sync_sources(
+        TV_SOURCES,
+        dest_root=DEST_TV,
+        is_tv=True,
+        full=full,
+        show_filter=show_filter,
+        episode_filter=episode_filter,
+        wipe_dest=wipe_dest,
+    )
+
+def sync_movie(movie_name: str):
+    return sync_movies(full=False, movie_filter=movie_name)
 
 
-def sync_movie(movie_name: str) -> None:
-    """
-    Convenience: attempt 4k then 1080 for the named movie.
-    """
-    # try 4k first
-    if SRC_MOVIES_4K.exists():
-        sync_movies_4k(full=False, movie_filter=movie_name)
-    if SRC_MOVIES_1080.exists():
-        sync_movies_1080(full=False, movie_filter=movie_name)
+def sync_show(show_name: str):
+    return sync_tv(full=False, show_filter=show_name)
 
 
-def sync_show(show_name: str) -> None:
-    """
-    Convenience: attempt 4k then 1080 for the named show.
-    """
-    if SRC_TV_4K.exists():
-        sync_tv_4k(full=False, show_filter=show_name)
-    if SRC_TV_1080.exists():
-        sync_tv_1080(full=False, show_filter=show_name)
+def sync_episode(show_name: str, episode_code: str):
+    return sync_tv(full=False, show_filter=show_name, episode_filter=episode_code)
 
 
-def sync_episode(show_name: str, episode_code: str) -> None:
-    """
-    Convenience: sync a specific episode for a show (tries 4k then 1080).
-    episode_code should look like 'S01E03'.
-    """
-    if SRC_TV_4K.exists():
-        sync_tv_4k(full=False, show_filter=show_name, episode_filter=episode_code)
-    if SRC_TV_1080.exists():
-        sync_tv_1080(full=False, show_filter=show_name, episode_filter=episode_code)
-
-
-def sync_all() -> None:
-    """
-    Run all four syncs in this order: movies 4k, movies 1080, tv 4k, tv 1080.
-    """
-    sync_movies_4k()
-    sync_movies_1080()
-    sync_tv_4k()
-    sync_tv_1080()
-
+def sync_all():
+    sync_movies()
+    sync_tv()
 
 # -----------------------------------------------------------
 # CLI support for ad-hoc running
@@ -550,7 +520,7 @@ def _cli():
                     filter_movie=args.movie,
                 )
             else:
-                sync_movies_4k(full=args.full, movie_filter=args.movie)
+                sync_movies(full=False, movie_filter=args.movie)
         if args.res in ("1080", "both"):
             if args.src:
                 _sync_engine(
@@ -564,7 +534,7 @@ def _cli():
                     filter_movie=args.movie,
                 )
             else:
-                sync_movies_1080(full=args.full, movie_filter=args.movie)
+                sync_movies(full=False, movie_filter=args.movie)
 
     if args.mode in ("tv", "all"):
         if args.res in ("4k", "both"):
@@ -581,7 +551,8 @@ def _cli():
                     filter_episode=args.episode,
                 )
             else:
-                sync_tv_4k(full=args.full, show_filter=args.show, episode_filter=args.episode)
+                sync_tv(full=False, show_filter=args.show, episode_filter=args.episode)
+
         if args.res in ("1080", "both"):
             if args.src:
                 _sync_engine(
@@ -596,7 +567,7 @@ def _cli():
                     filter_episode=args.episode,
                 )
             else:
-                sync_tv_1080(full=args.full, show_filter=args.show, episode_filter=args.episode)
+                sync_tv(full=False, show_filter=args.show, episode_filter=args.episode)
 
 
 if __name__ == "__main__":
