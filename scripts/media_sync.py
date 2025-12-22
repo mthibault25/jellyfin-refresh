@@ -351,7 +351,7 @@ def _sync_engine(
 
         # stop early
         if update_last_file and ts <= prev_ts:
-            yield from out("Stopping early: symlink <= last-run")
+            # yield from out("Stopping early: symlink <= last-run")
             break
 
         try:
@@ -436,7 +436,7 @@ def _sync_engine(
     if update_last_file and processed_any:
         try:
             cache_last_file.write_text(str(now_ts))
-            yield from out(f"Timestamp updated")
+            # yield from out(f"Timestamp updated")
             scanner.trigger_scan()
         except Exception as e:
             yield from out(f"Failed to update timestamp file {cache_last_file}: {e}")
