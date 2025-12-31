@@ -44,6 +44,7 @@ from config import (
     MediaSource,
     MOVIE_SOURCES,
     TV_SOURCES,
+    JELLYFIN_SYNC
 )
 
 from scripts import jellyfin_scan as scanner
@@ -198,12 +199,16 @@ def atomic_symlink(target: Path, dest: Path) -> None:
                 pass
 
 def wipe_dest_folder(path: Path):
+    removed = False
     if not path.exists():
-        return
+        return removed
     try:
         shutil.rmtree(path)
+        removed = True
     except Exception as e:
         raise RuntimeError(f"Failed to wipe destination folder {path}: {e}")
+    
+    return removed
 
 def already_tagged(name: str) -> bool:
     return bool(re.search(r"\s-\s(2160p|1080p|720p)", name))
@@ -237,7 +242,7 @@ def sync_sources(
             dest_path = None
 
         if dest_path and dest_path.exists():
-            wipe_dest_folder(dest_path)
+            removed = wipe_dest_folder(dest_path)
 
     # 🔁 PROCESS SOURCES
     for source in sources:
@@ -437,7 +442,8 @@ def _sync_engine(
         try:
             cache_last_file.write_text(str(now_ts))
             # yield from out(f"Timestamp updated")
-            scanner.trigger_scan()
+            if JELLYFIN_SYNC:
+                scanner.trigger_scan()
             yield from out("Jellyfin library scan triggered")
         except Exception as e:
             yield from out(f"Failed to update timestamp file {cache_last_file}: {e}")
@@ -480,32 +486,17 @@ def sync_tv(full=False, show_filter=None, episode_filter=None, wipe_dest=False):
     return tv_processed
 
 def sync_movie(movie_name: str):
-    movies_processed = yield from sync_movies(full=False, movie_filter=movie_name)
-    final_log(movies_processed=movies_processed)
+    yield from sync_movies(full=False, movie_filter=movie_name, wipe_dest=True)
 
 def sync_show(show_name: str):
-    tv_processed =  yield from sync_tv(full=False, show_filter=show_name)
-    final_log(tv_processed=tv_processed)
+    yield from sync_tv(full=False, show_filter=show_name, wipe_dest=True)
 
 def sync_episode(show_name: str, episode_code: str):
-    tv_processed = yield from sync_tv(full=False, show_filter=show_name, episode_filter=episode_code)
-    final_log(tv_processed=tv_processed)
+    yield from sync_tv(full=False, show_filter=show_name, episode_filter=episode_code, wipe_dest=True)
 
 def sync_all():
-    movies_processed = yield from sync_movies()
-    tv_processed = yield from sync_tv()
-    yield f'tv_processed={tv_processed}, movies_processed={movies_processed}'
-    final_log(tv_processed=tv_processed, movies_processed=movies_processed)
-
-def final_log(tv_processed: bool = None, movies_processed: bool = None):
-    ts = time.strftime("%Y-%m-%d %H:%M:%S")
-    
-    if (tv_processed is None) and (movies_processed is None):
-        return
-    elif ((tv_processed is None) and (not movies_processed)) or ((movies_processed is None) and (not tv_processed)):
-         yield f"[{ts}] No updates found across all sources.\n"
-    elif not (movies_processed and tv_processed):        
-        yield f"[{ts}] No updates found across all libraries.\n"
+    yield from sync_movies()
+    yield from sync_tv()
 
 # -----------------------------------------------------------
 # CLI support for ad-hoc running
