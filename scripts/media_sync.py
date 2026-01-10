@@ -309,10 +309,11 @@ def _sync_engine(
     cache_last_file.touch(exist_ok=True)
 
     update_last_file = True
-
+    targeted_run = False
     if full or filter_show or filter_episode or filter_movie:
         prev_ts = 0
         update_last_file = False
+        targeted_run = True
     else:
         try:
             prev_ts = int(cache_last_file.read_text().strip() or "0")
@@ -444,7 +445,7 @@ def _sync_engine(
             # yield from out(f"Timestamp updated")
             if JELLYFIN_SYNC:
                 scanner.trigger_scan()
-            yield from out("Jellyfin library scan triggered")
+                yield from out("Jellyfin library scan triggered")
         except Exception as e:
             yield from out(f"Failed to update timestamp file {cache_last_file}: {e}")
 
@@ -456,6 +457,10 @@ def _sync_engine(
     #     yield from out("Skipped timestamp update (targeted or full refresh).")
 
     # yield from out(f"{kind} SYNC COMPLETE\n")
+    elif targeted_run:
+        if JELLYFIN_SYNC:
+            scanner.trigger_scan()
+            yield from out("Jellyfin library scan triggered")
     return processed_any
 
 
@@ -523,7 +528,7 @@ def _cli():
                     dest_root=DEST_MOVIES,
                     cache_last_file=CACHE_FILES["movies_4k"],
                     default_res=DEFAULT_RES["4k"],
-                    log_path=LOG_DIR / LOG_MOVIE_4K,
+                    log_path=LOG_DIR / LOG_FILE,
                     is_tv=False,
                     full=args.full,
                     filter_movie=args.movie,
@@ -537,7 +542,7 @@ def _cli():
                     dest_root=DEST_MOVIES,
                     cache_last_file=CACHE_FILES["movies_1080"],
                     default_res=DEFAULT_RES["1080"],
-                    log_path=LOG_DIR / LOG_MOVIE_1080,
+                    log_path=LOG_DIR / LOG_FILE,
                     is_tv=False,
                     full=args.full,
                     filter_movie=args.movie,
@@ -553,7 +558,7 @@ def _cli():
                     dest_root=DEST_TV,
                     cache_last_file=CACHE_FILES["tv_4k"],
                     default_res=DEFAULT_RES["4k"],
-                    log_path=LOG_DIR / LOG_TV_4K,
+                    log_path=LOG_DIR / LOG_FILE,
                     is_tv=True,
                     full=args.full,
                     filter_show=args.show,
@@ -569,7 +574,7 @@ def _cli():
                     dest_root=DEST_TV,
                     cache_last_file=CACHE_FILES["tv_1080"],
                     default_res=DEFAULT_RES["1080"],
-                    log_path=LOG_DIR / LOG_TV_1080,
+                    log_path=LOG_DIR / LOG_FILE,
                     is_tv=True,
                     full=args.full,
                     filter_show=args.show,
