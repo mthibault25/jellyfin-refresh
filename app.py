@@ -16,6 +16,8 @@ from pathlib import Path
 from config import (
     DEST_MOVIES,
     DEST_TV,
+    SRC_TV_1080,
+    SRC_MOVIES_1080
 )
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
@@ -84,6 +86,12 @@ def list_movie_files(movie):
         return []
     return sorted(p.name for p in movie_dir.iterdir() if p.is_symlink())
 
+def list_source_shows():
+    return safe_listdir(SRC_TV_1080)
+
+def list_source_movies():
+    return safe_listdir(SRC_MOVIES_1080)
+
 
 ###############################################################################
 # Streaming wrapper — yields lines from Python generator
@@ -139,6 +147,10 @@ def refresh_show():
     if not show:
         return "Missing show", 400
 
+    # Validate against SOURCE, not DEST
+    if show not in list_source_shows():
+        return f"Show not found in source: {show}", 404
+
     def gen():
         for line in media_sync.sync_show(show_name=show):
             yield line
@@ -150,6 +162,9 @@ def refresh_movie():
     movie = request.form.get('movie', '').strip()
     if not movie:
         return "Missing movie", 400
+
+    if movie not in list_source_movies():
+        return f"Movie not found in source: {movie}", 404
 
     def gen():
         for line in media_sync.sync_movie(movie_name=movie):
