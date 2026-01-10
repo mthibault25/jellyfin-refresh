@@ -137,6 +137,8 @@
 
   // set link to open movie page
   mlink.href = '/movie/' + encodeURIComponent(name);
+
+  div.classList.toggle("missing", !item.present);
 }
 
   mrefreshBtn.addEventListener('click', (e) => {
@@ -157,5 +159,8 @@
   .suggestion-item { padding:8px; cursor:pointer; }
   .suggestion-item:hover { background:#eee; }
   .suggestion-actions { margin-top:8px; }
+  .suggestion-item.missing {
+  opacity: 0.5;
+  font-style: italic;}
   </style>
 {% endblock %}
