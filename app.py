@@ -38,19 +38,10 @@ def safe_listdir(path):
         return []
 
 def list_shows():
-    source = set(safe_listdir(SRC_TV_1080))
-    dest = set(safe_listdir(DEST_TV))
-
-    return [
-        {
-            "name": s,
-            "present": s in dest
-        }
-        for s in sorted(source)
-    ]
+    return safe_listdir(SRC_TV_1080)
 
 def list_movies():
-    return safe_listdir(DEST_MOVIES)
+    return safe_listdir(SRC_MOVIES_1080)
 
 def list_movie(movie):
     base = os.path.join(DEST_MOVIES, movie)
