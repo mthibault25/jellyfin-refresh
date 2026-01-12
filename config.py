@@ -144,5 +144,5 @@ TV_SOURCES = [
 # -----------------------------------------------------------
 JELLYFIN_SYNC = True
 JELLYFIN_URL = "http://192.168.2.232:8096"
-API_KEY = "f6523c0ba9604ecda03bf9481cec46e9"
+API_KEY = "1a6282ef8b07492d8ab020864400fc61"
 
